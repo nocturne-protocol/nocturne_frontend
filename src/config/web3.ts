@@ -12,8 +12,8 @@ if (!projectId) {
 const metadata = {
   name: 'Nocturne',
   description: 'Nocturne - Tokenized Assets Trading Platform',
-  url: 'https://nocturne.app', // Replace with your actual URL
-  icons: ['https://nocturne.app/nocturne.jpg'] // Replace with your actual icon
+  url: 'https://nocturne-rwa.vercel.app', // Replace with your actual URL
+  icons: ['https://nocturne-rwa.vercel.app/nocturne.jpg'] // Replace with your actual icon
 }
 
 // Create wagmiConfig

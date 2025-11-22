@@ -21,7 +21,7 @@ export function Navbar() {
                alt="Nocturne" 
                width={32} 
                height={32} 
-               className="rounded-full"
+               className="rounded-lg"
              />
           </Link>
           

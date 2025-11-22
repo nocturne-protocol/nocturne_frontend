@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useAccount, useChainId } from 'wagmi';
+import { useAccount, useChainId, useWriteContract, useReadContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
 import { DollarSign } from 'lucide-react';
+// EthCrypto removed from top-level imports to avoid SSR issues
+// import EthCrypto from 'eth-crypto';
 
 interface TradingInterfaceProps {
   ticker: string;
@@ -19,10 +21,33 @@ const CHAIN_INFO: Record<number, { name: string; color: string; bgColor: string;
   421614: { name: 'Arbitrum Sepolia', color: 'bg-blue-100', bgColor: 'bg-blue-100', iconPath: '/asset/arbitrum.png' },
 };
 
+const PRIVATE_ERC20_ADDRESS = '0x3b3C98D7AfF91b7032d81fC25dfe8d8ECFe546CC';
+const PLATFORM_WALLET = '0x8F64b8442E110c6DbBA5975EF0b829Ee104f6355';
+const ARBITRUM_SEPOLIA_ID = 421614;
+
+const PRIVATE_ERC20_ABI = [
+  {"inputs":[{"internalType":"string","name":"_name","type":"string"},{"internalType":"string","name":"_symbol","type":"string"},{"internalType":"uint8","name":"_decimals","type":"uint8"},{"internalType":"bytes","name":"_encryptionPublicKey","type":"bytes"}],"stateMutability":"nonpayable","type":"constructor"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"account","type":"address"},{"indexed":false,"internalType":"bytes","name":"newEncryptedBalance","type":"bytes"}],"name":"BalanceUpdate","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"bytes","name":"encryptedAmount","type":"bytes"}],"name":"Mint","type":"event"},
+  {"anonymous":false,"inputs":[{"indexed":true,"internalType":"address","name":"from","type":"address"},{"indexed":true,"internalType":"address","name":"to","type":"address"},{"indexed":false,"internalType":"bytes","name":"encryptedAmount","type":"bytes"}],"name":"TransferRequested","type":"event"},
+  {"inputs":[{"internalType":"address","name":"account","type":"address"}],"name":"balanceOf","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"decimals","outputs":[{"internalType":"uint8","name":"","type":"uint8"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"","type":"address"}],"name":"encryptedBalances","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"encryptionPublicKey","outputs":[{"internalType":"bytes","name":"","type":"bytes"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"bytes","name":"encryptedAmount","type":"bytes"}],"name":"mint","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[],"name":"name","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"symbol","outputs":[{"internalType":"string","name":"","type":"string"}],"stateMutability":"view","type":"function"},
+  {"inputs":[],"name":"totalSupply","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"},
+  {"inputs":[{"internalType":"address","name":"to","type":"address"},{"internalType":"bytes","name":"encryptedAmount","type":"bytes"}],"name":"transfer","outputs":[],"stateMutability":"nonpayable","type":"function"},
+  {"inputs":[{"internalType":"address","name":"sender","type":"address"},{"internalType":"address","name":"receiver","type":"address"},{"internalType":"bytes","name":"senderNewBalance","type":"bytes"},{"internalType":"bytes","name":"receiverNewBalance","type":"bytes"}],"name":"updateBalance","outputs":[],"stateMutability":"nonpayable","type":"function"}
+] as const;
+
 export default function TradingInterface({ ticker, assetName, currentPrice, assetImage }: TradingInterfaceProps) {
-  const { isConnected } = useAccount();
+  const { address, isConnected } = useAccount();
   const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
   const [mounted, setMounted] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -31,6 +56,16 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
   const [payAmount, setPayAmount] = useState<string>('0');
   const [receiveAmount, setReceiveAmount] = useState<string>('0');
+
+  // Contract Hooks
+  const { data: encryptionPublicKey } = useReadContract({
+    address: PRIVATE_ERC20_ADDRESS,
+    abi: PRIVATE_ERC20_ABI,
+    functionName: 'encryptionPublicKey',
+    chainId: ARBITRUM_SEPOLIA_ID,
+  });
+
+  const { writeContractAsync } = useWriteContract();
 
   const chainInfo = CHAIN_INFO[chainId] || { name: 'Unknown', color: 'bg-gray-100', bgColor: 'bg-gray-100', iconPath: '/asset/ethereum.png' };
 
@@ -64,16 +99,106 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   const getButtonText = () => {
     const numPay = parseFloat(payAmount) || 0;
     
+    if (isProcessing) return 'Processing...';
     if (numPay === 0) return 'Enter an amount';
 
     if (activeTab === 'buy') {
-      // For Buy, shares are in receiveAmount
       const shares = parseFloat(receiveAmount);
       return `Buy ${shares} Shares`;
     } else {
-      // For Sell, shares are in payAmount
       const shares = parseFloat(payAmount);
       return `Sell ${shares} Shares`;
+    }
+  };
+
+  const handleTransaction = async () => {
+    // Add validation here since we removed it from the button disabled state
+    const sharesAmount = activeTab === 'buy' ? parseFloat(receiveAmount) : parseFloat(payAmount);
+    if (isNaN(sharesAmount) || sharesAmount <= 0) {
+      // Optionally focus input or shake animation
+      return;
+    }
+
+    if (!isConnected || !address) {
+      alert('Please connect your wallet first');
+      return;
+    }
+
+    if (chainId !== ARBITRUM_SEPOLIA_ID) {
+      try {
+        await switchChain({ chainId: ARBITRUM_SEPOLIA_ID });
+      } catch (error) {
+        console.error('Failed to switch network:', error);
+        return;
+      }
+    }
+
+    if (!encryptionPublicKey) {
+      alert('Encryption key not found. Make sure you are on the correct network.');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Dynamically import EthCrypto to avoid SSR issues
+      const EthCrypto = (await import('eth-crypto')).default;
+
+      // 1. Convert encryption key from bytes (hex) to string format
+      const publicKey = encryptionPublicKey.toString().slice(2); // Remove '0x'
+
+      // 2. Encrypt the amount
+      const encryptedObject = await EthCrypto.encryptWithPublicKey(
+        publicKey,
+        sharesAmount.toString()
+      );
+      
+      // 3. Convert encrypted object to string/bytes for the contract
+      const encryptedString = EthCrypto.cipher.stringify(encryptedObject);
+      const encryptedBytes = `0x${Buffer.from(encryptedString).toString('hex')}`;
+
+      let txHash: string;
+
+      if (activeTab === 'buy') {
+        // --- BUY LOGIC ---
+        // Sender: User Wallet (via Wagmi)
+        // Function: mint (to: user, amount: encrypted)
+        console.log('Initiating BUY transaction from User Wallet (Mint)...');
+        
+        txHash = await writeContractAsync({
+          address: PRIVATE_ERC20_ADDRESS,
+          abi: PRIVATE_ERC20_ABI,
+          functionName: 'mint',
+          args: [address, encryptedBytes as `0x${string}`],
+          chainId: ARBITRUM_SEPOLIA_ID,
+        });
+        
+      } else {
+        // --- SELL LOGIC ---
+        // Sender: User Wallet (via Wagmi)
+        // Function: transfer (to: platform, amount: encrypted)
+        console.log('Initiating SELL transaction from User Wallet (Transfer)...');
+
+        const destinationAddress = PLATFORM_WALLET;
+
+        txHash = await writeContractAsync({
+          address: PRIVATE_ERC20_ADDRESS,
+          abi: PRIVATE_ERC20_ABI,
+          functionName: 'transfer',
+          args: [destinationAddress, encryptedBytes as `0x${string}`],
+          chainId: ARBITRUM_SEPOLIA_ID,
+        });
+      }
+
+      console.log('Transaction confirmed:', txHash);
+      alert(`${activeTab === 'buy' ? 'Buy' : 'Sell'} transaction successful! Hash: ${txHash}`);
+
+    } catch (error: any) {
+      console.error('Transaction failed:', error);
+      const msg = error?.reason || error?.message || 'Unknown error';
+      alert(`Transaction failed: ${msg}`);
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -220,7 +345,15 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         </div>
 
         {/* Action Button */}
-        <button className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-colors shadow-lg mb-6">
+        <button
+          onClick={handleTransaction}
+          disabled={isProcessing || parseFloat(payAmount) === 0}
+          className={`w-full font-bold py-4 rounded-xl transition-colors shadow-lg mb-6 ${
+            isProcessing || parseFloat(payAmount) === 0
+              ? 'bg-gray-900 text-white cursor-not-allowed' // Keep it black but disabled cursor
+              : 'bg-gray-900 hover:bg-black text-white'
+          }`}
+        >
           {getButtonText()}
         </button>
 
