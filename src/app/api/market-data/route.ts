@@ -6,12 +6,12 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'demo';
 
 // Mapping of tickers to real stock symbols and company names
 const TICKER_MAP: Record<string, { symbol: string; name: string; category?: string }> = {
+  'CRCLon': { symbol: 'CRM', name: 'Circle Internet Group' },
+  'FUTUon': { symbol: 'FUTU', name: 'Futu Holdings' },
+  'ACNon': { symbol: 'ACN', name: 'Accenture' },
   'NVDAon': { symbol: 'NVDA', name: 'NVIDIA' },
   'SPYon': { symbol: 'SPY', name: 'SPDR S&P 500 ETF', category: 'Equities ETF' },
   'INTCon': { symbol: 'INTC', name: 'Intel' },
-  'CRCLon': { symbol: 'CRM', name: 'Salesforce' },
-  'FUTUon': { symbol: 'TSLA', name: 'Tesla' },
-  'HIMSon': { symbol: 'HIMS', name: 'Hims & Hers Health' },
   'FIGon': { symbol: 'FIG', name: 'Figma', category: 'Equities Stock' },
   'AMDon': { symbol: 'AMD', name: 'AMD', category: 'Equities Stock' },
 };
@@ -30,16 +30,22 @@ interface StockData {
 async function fetchStockPrice(symbol: string) {
   try {
     // Using Finnhub API
-    const response = await fetch(
-      `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`,
-      { next: { revalidate: 60 } } // Cache for 60 seconds
-    );
+    const url = `https://finnhub.io/api/v1/quote?symbol=${symbol}&token=${FINNHUB_API_KEY}`;
+    
+    const response = await fetch(url, { 
+      cache: 'no-store' // Disable cache for real-time data
+    });
     
     if (!response.ok) {
       throw new Error('Failed to fetch from Finnhub');
     }
     
     const data = await response.json();
+    
+    // Check if we got valid data
+    if (data.c === 0 && data.pc === 0) {
+      return null;
+    }
     
     return {
       currentPrice: data.c || 0,
@@ -49,7 +55,6 @@ async function fetchStockPrice(symbol: string) {
     };
   } catch (error) {
     console.error(`Error fetching ${symbol}:`, error);
-    // Return mock data as fallback
     return null;
   }
 }
@@ -121,78 +126,78 @@ export async function GET() {
 function getMockData(): StockData[] {
   return [
     {
+      ticker: "CRCLon",
+      name: "Circle Internet Group",
+      price: "72.40",
+      change: 8.11,
+      changeValue: "5.43",
+      iconColor: "#8B5CF6",
+      trendData: [68, 69, 70, 71, 71.5, 72, 72.2, 72.3, 72.40]
+    },
+    {
+      ticker: "FUTUon",
+      name: "Futu Holdings",
+      price: "162.30",
+      change: 5.43,
+      changeValue: "8.36",
+      iconColor: "#2563EB",
+      trendData: [155, 156, 158, 159, 160, 161, 161.5, 162, 162.30]
+    },
+    {
+      ticker: "ACNon",
+      name: "Accenture",
+      price: "254.13",
+      change: 4.96,
+      changeValue: "12.01",
+      iconColor: "#A855F7",
+      trendData: [245, 247, 249, 250, 251, 252, 253, 254, 254.13]
+    },
+    {
       ticker: "NVDAon",
       name: "NVIDIA",
-      price: "180.07",
-      change: -0.07,
-      changeValue: "0.13",
+      price: "180.04",
+      change: 0.97,
+      changeValue: "1.76",
       iconColor: "#76B900",
-      trendData: [185, 184, 182, 180, 181, 179, 178, 180, 180.07]
+      trendData: [178, 178.5, 179, 179.2, 179.5, 179.8, 180, 180.1, 180.04]
     },
     {
       ticker: "SPYon",
       name: "SPDR S&P 500 ETF",
-      price: "660.78",
-      change: 1.03,
-      changeValue: "6.73",
+      price: "661.29",
+      change: 1.00,
+      changeValue: "6.50",
       iconColor: "#6A1B9A",
-      trendData: [650, 652, 655, 654, 658, 660, 662, 660, 660.78],
+      trendData: [655, 656, 657, 658, 659, 660, 660.5, 661, 661.29],
       category: "Equities ETF"
     },
     {
       ticker: "INTCon",
       name: "Intel",
-      price: "34.51",
-      change: 4.01,
-      changeValue: "1.33",
+      price: "34.66",
+      change: 2.62,
+      changeValue: "0.88",
       iconColor: "#0071C5",
-      trendData: [33, 33.2, 33.5, 33.8, 34, 34.2, 34.5, 34.4, 34.51]
-    },
-    {
-      ticker: "CRCLon",
-      name: "Salesforce",
-      price: "227.11",
-      change: 0.77,
-      changeValue: "1.74",
-      iconColor: "#8B5CF6",
-      trendData: [225, 225.5, 226, 226.5, 227, 226.8, 227.2, 227, 227.11]
-    },
-    {
-      ticker: "FUTUon",
-      name: "Tesla",
-      price: "391.09",
-      change: 1.05,
-      changeValue: "4.14",
-      iconColor: "#2563EB",
-      trendData: [385, 387, 388, 389, 390, 391, 390.5, 391.5, 391.09]
-    },
-    {
-      ticker: "HIMSon",
-      name: "Hims & Hers Health",
-      price: "34.71",
-      change: 3.24,
-      changeValue: "1.09",
-      iconColor: "#1F2937",
-      trendData: [33, 33.5, 33.8, 34, 34.2, 34.5, 34.6, 34.7, 34.71]
+      trendData: [33.5, 33.7, 33.9, 34, 34.2, 34.4, 34.5, 34.6, 34.66]
     },
     {
       ticker: "FIGon",
       name: "Figma",
-      price: "34.31",
+      price: "34.49",
       change: 2.20,
       changeValue: "0.74",
       iconColor: "#F24E1E",
-      trendData: [33, 33.3, 33.5, 33.8, 34, 34.1, 34.3, 34.2, 34.31],
+      trendData: [33, 33.3, 33.5, 33.8, 34, 34.1, 34.3, 34.4, 34.49],
       category: "Equities Stock"
     },
     {
       ticker: "AMDon",
       name: "AMD",
-      price: "203.78",
+      price: "204.53",
       change: 1.09,
       changeValue: "2.24",
       iconColor: "#ED1C24",
-      trendData: [200, 201, 201.5, 202, 202.5, 203, 203.5, 203.8, 203.78],
+      trendData: [201, 202, 202.5, 203, 203.5, 204, 204.2, 204.4, 204.53],
       category: "Equities Stock"
     }
   ];

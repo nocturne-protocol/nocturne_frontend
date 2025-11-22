@@ -46,27 +46,27 @@ export function MarketTicker() {
   }
 
   return (
-    <div className="w-full bg-white border-b border-gray-200 py-2 overflow-hidden">
-      <div className="flex items-center space-x-8 animate-scroll px-4 text-xs font-medium text-gray-600 whitespace-nowrap">
+    <div className="w-full bg-white border-b border-gray-200 py-2 overflow-hidden relative">
+      <div className="flex items-center space-x-8 animate-scroll text-xs font-medium text-gray-600 whitespace-nowrap">
+        {/* First set */}
         {marketData.map((item, index) => (
-          <div key={index} className="flex items-center space-x-2">
+          <div key={index} className="flex items-center space-x-2 flex-shrink-0">
             <span className="text-gray-500">{item.name}</span>
             <span className="text-black font-semibold">{item.value}</span>
             <span className={cn("flex items-center", item.isUp ? "text-green-600" : "text-red-600")}>
               {item.isUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-              {item.change}%
+              {item.change.toFixed(2)}%
             </span>
           </div>
         ))}
-         {/* Duplicate for seamless scrolling effect if we were to add animation, but for now static flex is fine or simple map */}
-          {marketData.map((item, index) => (
-          <div key={`dup-${index}`} className="flex items-center space-x-2 md:hidden">
-             {/* Hidden on desktop, visible on mobile if we do scrolling */}
+        {/* Duplicate for seamless loop */}
+        {marketData.map((item, index) => (
+          <div key={`dup-${index}`} className="flex items-center space-x-2 flex-shrink-0">
             <span className="text-gray-500">{item.name}</span>
             <span className="text-black font-semibold">{item.value}</span>
             <span className={cn("flex items-center", item.isUp ? "text-green-600" : "text-red-600")}>
               {item.isUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
-              {item.change}%
+              {item.change.toFixed(2)}%
             </span>
           </div>
         ))}

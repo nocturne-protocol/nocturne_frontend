@@ -21,18 +21,23 @@ interface AssetData {
 export function ExploreAssets() {
   const [assets, setAssets] = useState<AssetData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     const fetchMarketData = async () => {
       try {
-        const response = await fetch('/api/market-data');
+        const response = await fetch('/api/market-data', {
+          cache: 'no-store' // Disable cache
+        });
         const result = await response.json();
         
         if (result.success && result.data) {
           setAssets(result.data);
+          setLastUpdate(new Date().toLocaleTimeString());
         } else {
           // Use fallback data
           setAssets(result.data || []);
+          setLastUpdate(new Date().toLocaleTimeString());
         }
       } catch (error) {
         console.error('Error fetching market data:', error);
@@ -53,7 +58,15 @@ export function ExploreAssets() {
   return (
     <section className="space-y-6">
        <div className="flex items-center justify-between mb-6">
-         <h2 className="text-2xl font-medium text-gray-900">Explore Assets</h2>
+         <div>
+           <h2 className="text-2xl font-medium text-gray-900">Explore Assets</h2>
+           {lastUpdate && (
+             <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
+               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+               Last update: {lastUpdate} • Auto-refresh every 60s
+             </div>
+           )}
+         </div>
        </div>
 
        {/* Filters and Search */}

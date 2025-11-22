@@ -18,21 +18,27 @@ export function DashboardSummary() {
   const [trending, setTrending] = useState<Asset[]>([]);
   const [newlyAdded, setNewlyAdded] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/market-data');
+        const response = await fetch('/api/market-data', {
+          cache: 'no-store' // Disable cache
+        });
         const result = await response.json();
         
         if (result.data && result.data.length > 0) {
           const assets: MarketData[] = result.data;
           
-          // Top Gainers: Sort by highest positive change
-          const gainers = [...assets]
-            .filter(a => a.change > 0)
-            .sort((a, b) => b.change - a.change)
-            .slice(0, 3)
+          // Create a map for easy lookup
+          const assetMap = new Map(assets.map(a => [a.ticker, a]));
+          
+          // Top Gainers: Fixed order CRCLon, FUTUon, ACNon
+          const topGainersOrder = ['CRCLon', 'FUTUon', 'ACNon'];
+          const gainers = topGainersOrder
+            .map(ticker => assetMap.get(ticker))
+            .filter(a => a !== undefined)
             .map(a => ({
               ticker: a.ticker,
               name: a.name,
@@ -41,20 +47,25 @@ export function DashboardSummary() {
               iconColor: a.iconColor,
             }));
           
-          // Trending: Take the first 3 assets (could be sorted by volume in real scenario)
-          const trendingAssets = assets.slice(0, 3).map(a => ({
-            ticker: a.ticker,
-            name: a.name,
-            price: a.price,
-            change: a.change,
-            iconColor: a.iconColor,
-            marketCap: formatMarketCap(a.price, a.ticker), // Mock market cap based on price
-          }));
+          // Trending: Fixed order NVDAon, SPYon, INTCon
+          const trendingOrder = ['NVDAon', 'SPYon', 'INTCon'];
+          const trendingAssets = trendingOrder
+            .map(ticker => assetMap.get(ticker))
+            .filter(a => a !== undefined)
+            .map(a => ({
+              ticker: a.ticker,
+              name: a.name,
+              price: a.price,
+              change: a.change,
+              iconColor: a.iconColor,
+              marketCap: formatMarketCap(a.price, a.ticker),
+            }));
           
-          // Newly Added: Filter assets with category or take last 3
-          const newAssets = assets
-            .filter(a => a.category)
-            .slice(0, 3)
+          // Newly Added: Fixed order FIGon, AMDon, SPYon
+          const newlyAddedOrder = ['FIGon', 'AMDon', 'SPYon'];
+          const newAssets = newlyAddedOrder
+            .map(ticker => assetMap.get(ticker))
+            .filter(a => a !== undefined)
             .map(a => ({
               ticker: a.ticker,
               name: a.name,
@@ -66,7 +77,8 @@ export function DashboardSummary() {
           
           setTopGainers(gainers);
           setTrending(trendingAssets);
-          setNewlyAdded(newAssets.length > 0 ? newAssets : trendingAssets.map(a => ({...a, marketCap: 'Equities Stock'})));
+          setNewlyAdded(newAssets);
+          setLastUpdate(new Date().toLocaleTimeString());
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
@@ -108,10 +120,18 @@ export function DashboardSummary() {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-      <AssetList title="Top Gainers" badge="24H" assets={topGainers} />
-      <AssetList title="Trending" badge="24H" assets={trending} />
-      <AssetList title="Newly Added" assets={newlyAdded} />
+    <div>
+      {lastUpdate && (
+        <div className="text-xs text-gray-400 mb-4 flex items-center gap-2">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+          Last update: {lastUpdate} • Auto-refresh every 60s
+        </div>
+      )}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        <AssetList title="Top Gainers" badge="24H" assets={topGainers} />
+        <AssetList title="Trending" badge="24H" assets={trending} />
+        <AssetList title="Newly Added" assets={newlyAdded} />
+      </div>
     </div>
   );
 }

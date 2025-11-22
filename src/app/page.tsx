@@ -9,7 +9,7 @@ export default function Home() {
       <Navbar />
       <MarketTicker />
       
-      <main className="max-w-7xl mx-auto px-4 py-8 space-y-12">
+      <main className="w-full px-8 py-8 space-y-12">
         <DashboardSummary />
         <ExploreAssets />
       </main>
