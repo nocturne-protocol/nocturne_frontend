@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft, ArrowUp, ArrowDown } from 'lucide-react';
 import Image from 'next/image';
 import { DetailedChart } from '@/components/DetailedChart';
+import TradingInterface from '@/components/TradingInterface';
 import { cn } from '@/lib/utils';
 
 
@@ -137,17 +138,6 @@ export default function AssetPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <header className="border-b border-gray-200 px-8 py-4">
-        <button
-          onClick={() => router.push('/')}
-          className="flex items-center gap-2 text-gray-600 hover:text-black transition-colors"
-        >
-          <ArrowLeft size={20} />
-          <span className="text-sm font-medium">Back</span>
-        </button>
-      </header>
-
       <div className="max-w-7xl mx-auto px-8 py-8">
         {/* Asset Header */}
         <div className="flex items-center gap-4 mb-8">
@@ -166,118 +156,148 @@ export default function AssetPage() {
           </div>
         </div>
 
-        {/* Price Section */}
-        <div className="bg-gray-50 rounded-3xl p-8 mb-8">
-          <div className="mb-6">
-            <div className="text-5xl font-bold text-gray-900 mb-2">
-              ${asset.price}
+        {/* Top Section: Chart & Trading Interface */}
+        <div className="flex flex-col xl:flex-row gap-8 items-start mb-12">
+          {/* Chart Column */}
+          <div className="flex-1 w-full bg-gray-50/50 rounded-3xl p-6 sm:p-8">
+            <div className="mb-6">
+              <div className="text-5xl sm:text-6xl font-bold text-gray-900 mb-2 tracking-tight">
+                ${asset.price}
+              </div>
+              <div className={cn(
+                "flex items-center gap-2 text-lg font-medium",
+                isPositive ? "text-green-600" : "text-red-600"
+              )}>
+                {isPositive ? <ArrowUp size={24} /> : <ArrowDown size={24} />}
+                ${asset.changeValue} ({Math.abs(asset.change).toFixed(4)}%) 24H
+              </div>
             </div>
-            <div className={cn(
-              "flex items-center gap-2 text-lg font-medium",
-              isPositive ? "text-green-600" : "text-red-600"
-            )}>
-              {isPositive ? <ArrowUp size={20} /> : <ArrowDown size={20} />}
-              ${asset.changeValue} ({Math.abs(asset.change).toFixed(4)}%) 24H
+
+            {/* Time Range Selector */}
+            <div className="flex flex-wrap gap-2 mb-8">
+              {['1D', '1W', '1M', '3M', '1Y', 'ALL'].map((range) => (
+                <button
+                  key={range}
+                  onClick={() => setTimeRange(range)}
+                  className={cn(
+                    "px-4 py-2 rounded-lg text-sm font-bold transition-colors",
+                    timeRange === range
+                      ? "bg-white text-gray-900 shadow-sm"
+                      : "text-gray-400 hover:text-gray-900"
+                  )}
+                >
+                  {range}
+                </button>
+              ))}
+            </div>
+
+            {/* Chart */}
+            <div className="h-[400px] w-full">
+              <DetailedChart
+                data={generateHistoricalData(parseFloat(asset.price), asset.change, timeRange)}
+                color={isPositive ? "#10B981" : "#EF4444"}
+              />
             </div>
           </div>
 
-          {/* Time Range Selector */}
-          <div className="flex gap-2 mb-6">
-            {['1D', '1W', '1M', '3M', '1Y', 'ALL'].map((range) => (
-              <button
-                key={range}
-                onClick={() => setTimeRange(range)}
-                className={cn(
-                  "px-4 py-2 rounded-lg text-sm font-medium transition-colors",
-                  timeRange === range
-                    ? "bg-white text-gray-900 shadow-sm"
-                    : "text-gray-500 hover:text-gray-900"
-                )}
-              >
-                {range}
-              </button>
-            ))}
+          {/* Right Column - Trading Interface */}
+          <div className="w-full xl:w-[420px] flex-shrink-0">
+            <div className="sticky top-8">
+              <TradingInterface
+                ticker={ticker}
+                assetName={asset.name}
+                currentPrice={parseFloat(asset.price)}
+                assetImage={getAssetImage(ticker)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Section: Details */}
+        <div className="max-w-4xl">
+          {/* About Section */}
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">About</h2>
+            <p className="text-gray-600 leading-relaxed mb-2 text-lg">
+              {ASSET_DESCRIPTIONS[ticker] || "No description available."}
+            </p>
+            <button className="text-gray-900 font-semibold hover:underline">
+              Show More
+            </button>
           </div>
 
-          {/* Chart */}
-          <DetailedChart
-            data={generateHistoricalData(parseFloat(asset.price), asset.change, timeRange)}
-            color={isPositive ? "#10B981" : "#EF4444"}
-          />
-        </div>
+          {/* Asset Details List */}
+          <div className="border-t border-gray-100">
+            {info.chains && (
+              <div className="flex items-center justify-between py-6 border-b border-gray-100">
+                <span className="text-gray-500 text-lg">Supported Chains</span>
+                <div className="flex gap-2">
+                  {info.chains.map((chain: string) => (
+                    <div key={chain} className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                      <span className="text-xs">⛓️</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            
+            {info.underlyingAssetName && (
+              <div className="flex items-center justify-between py-6 border-b border-gray-100">
+                <span className="text-gray-500 text-lg">Underlying Asset Name</span>
+                <span className="text-gray-900 font-medium text-lg">{info.underlyingAssetName}</span>
+              </div>
+            )}
 
-        {/* About Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">About</h2>
-          <p className="text-gray-700 leading-relaxed mb-2">
-            {ASSET_DESCRIPTIONS[ticker] || "No description available."}
-          </p>
-          <button className="text-gray-900 font-medium hover:underline">
-            Show More
-          </button>
-        </div>
-
-        {/* Asset Details Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {info.chains && (
-            <div className="flex items-center justify-between py-4 border-b border-gray-200">
-              <span className="text-gray-600">Supported Chains</span>
-              <div className="flex gap-2">
-                {info.chains.map((chain: string) => (
-                  <div key={chain} className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                    <span className="text-xs">⛓️</span>
+            {info.onchainAddress && (
+              <div className="flex items-center justify-between py-6 border-b border-gray-100">
+                <span className="text-gray-500 text-lg">Onchain Address</span>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-blue-600 rounded-full flex items-center justify-center">
+                    <span className="text-white text-[10px]">◆</span>
                   </div>
-                ))}
+                  <span className="text-gray-900 font-mono text-lg">{info.onchainAddress}</span>
+                  <button className="text-gray-400 hover:text-gray-900 ml-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
-          
-          {info.underlyingAssetName && (
-            <div className="flex items-center justify-between py-4 border-b border-gray-200">
-              <span className="text-gray-600">Underlying Asset Name</span>
-              <span className="text-gray-900 font-medium">{info.underlyingAssetName}</span>
-            </div>
-          )}
+            )}
 
-          {info.onchainAddress && (
-            <div className="flex items-center justify-between py-4 border-b border-gray-200">
-              <span className="text-gray-600">Onchain Address</span>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-900 font-mono">{info.onchainAddress}</span>
-                <button className="text-gray-400 hover:text-gray-900">📋</button>
+            {info.underlyingAssetTicker && (
+              <div className="flex items-center justify-between py-6 border-b border-gray-100">
+                <span className="text-gray-500 text-lg">Underlying Asset Ticker</span>
+                <span className="text-gray-900 font-medium text-lg">{info.underlyingAssetTicker}</span>
               </div>
-            </div>
-          )}
+            )}
 
-          {info.underlyingAssetTicker && (
-            <div className="flex items-center justify-between py-4 border-b border-gray-200">
-              <span className="text-gray-600">Underlying Asset Ticker</span>
-              <span className="text-gray-900 font-medium">{info.underlyingAssetTicker}</span>
-            </div>
-          )}
-
-          {info.category && (
-            <div className="flex items-center justify-between py-4 border-b border-gray-200">
-              <span className="text-gray-600">Category</span>
-              <div className="flex gap-2">
-                {info.category.map((cat: string) => (
-                  <span
-                    key={cat}
-                    className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-medium"
-                  >
-                    {cat}
-                  </span>
-                ))}
+            {info.category && (
+              <div className="flex items-center justify-between py-6 border-b border-gray-100">
+                <span className="text-gray-500 text-lg">Category</span>
+                <div className="flex gap-2">
+                  {info.category.map((cat: string) => (
+                    <span
+                      key={cat}
+                      className="px-4 py-1.5 bg-purple-50 text-purple-700 rounded-full text-sm font-semibold"
+                    >
+                      {cat}
+                    </span>
+                  ))}
+                </div>
               </div>
-            </div>
-          )}
+            )}
 
-          {info.sharesPerToken && (
-            <div className="flex items-center justify-between py-4 border-b border-gray-200">
-              <span className="text-gray-600">Shares Per Token</span>
-              <span className="text-gray-900 font-medium">{info.sharesPerToken}</span>
-            </div>
-          )}
+            {info.sharesPerToken && (
+              <div className="flex items-center justify-between py-6 border-b border-gray-100">
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-500 text-lg">Shares Per Token</span>
+                  <button className="w-5 h-5 bg-gray-100 rounded-full flex items-center justify-center text-gray-500 text-xs font-bold">?</button>
+                </div>
+                <span className="text-gray-900 font-medium text-lg">{info.sharesPerToken}</span>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -304,4 +324,3 @@ function generateHistoricalData(currentPrice: number, changePercent: number, tim
   data[data.length - 1].price = currentPrice;
   return data;
 }
-
