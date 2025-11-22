@@ -13,7 +13,7 @@ interface AssetCardProps {
   trendData: number[];
 }
 
-export function AssetCard({ ticker, name, price, change, changeValue, iconColor, trendData }: AssetCardProps) {
+export function AssetCard({ ticker, name, price, change, changeValue, trendData }: AssetCardProps) {
   const isPositive = change >= 0;
   const bgColor = isPositive ? "bg-white" : "bg-red-50";
   const lineColor = isPositive ? "#10B981" : "#EF4444";

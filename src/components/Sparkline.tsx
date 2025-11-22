@@ -1,7 +1,7 @@
 "use client";
 
 import { LineChart, Line } from "recharts";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 interface SparklineProps {
   data: number[];
@@ -9,12 +9,8 @@ interface SparklineProps {
 }
 
 export function Sparkline({ data, color = "#10B981" }: SparklineProps) {
-  const [mounted, setMounted] = useState(false);
+  const [mounted] = useState(true);
   const chartData = data.map((val, i) => ({ i, val }));
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   if (!mounted) {
     return <div className="w-full h-full" />;
