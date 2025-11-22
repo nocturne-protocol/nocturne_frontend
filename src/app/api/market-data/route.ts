@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { generateMiniChartData } from '@/lib/chartData';
 
 // Free API from Finnhub (you can also use Alpha Vantage, Yahoo Finance, etc.)
 const FINNHUB_API_KEY = process.env.FINNHUB_API_KEY || 'demo';
@@ -77,59 +78,18 @@ function generateTrendData(currentPrice: number, changePercent: number): number[
 }
 
 export async function GET() {
-  try {
-    // Fetch all data in parallel for better performance
-    const fetchPromises = Object.entries(TICKER_MAP).map(async ([displayTicker, tickerInfo]) => {
-      const stockData = await fetchStockPrice(tickerInfo.symbol);
-      
-      if (stockData && stockData.currentPrice > 0) {
-        return {
-          ticker: displayTicker,
-          name: tickerInfo.name,
-          price: stockData.currentPrice.toFixed(2),
-          change: stockData.change,
-          changeValue: Math.abs(stockData.changeValue).toFixed(2),
-          iconColor: '#000000',
-          trendData: generateTrendData(stockData.currentPrice, stockData.change),
-          category: tickerInfo.category,
-        };
-      }
-      return null;
-    });
-    
-    const results = (await Promise.all(fetchPromises)).filter(r => r !== null) as StockData[];
-    
-    // If we don't have all 8 assets, use mock data
-    if (results.length < 8) {
-      return NextResponse.json({
-        success: true,
-        data: getMockData(),
-        timestamp: new Date().toISOString(),
-        isMockData: true,
-      });
-    }
-    
-    return NextResponse.json({
-      success: true,
-      data: results,
-      timestamp: new Date().toISOString(),
-      isMockData: false,
-    });
-    
-  } catch (error) {
-    console.error('Error in market-data API:', error);
-    return NextResponse.json({
-      success: true,
-      data: getMockData(),
-      timestamp: new Date().toISOString(),
-      isMockData: true,
-    });
-  }
+  // Always return mock data - no API calls
+  return NextResponse.json({
+    success: true,
+    data: getMockData(),
+    timestamp: new Date().toISOString(),
+    isMockData: true,
+  });
 }
 
-// Fallback mock data
+// Fallback mock data with generated chart data
 function getMockData(): StockData[] {
-  return [
+  const mockAssets = [
     {
       ticker: "CRCLon",
       name: "Circle Internet Group",
@@ -137,7 +97,6 @@ function getMockData(): StockData[] {
       change: 8.11,
       changeValue: "5.43",
       iconColor: "#8B5CF6",
-      trendData: [68, 69, 70, 71, 71.5, 72, 72.2, 72.3, 72.40]
     },
     {
       ticker: "FUTUon",
@@ -146,7 +105,6 @@ function getMockData(): StockData[] {
       change: 5.43,
       changeValue: "8.36",
       iconColor: "#2563EB",
-      trendData: [155, 156, 158, 159, 160, 161, 161.5, 162, 162.30]
     },
     {
       ticker: "ACNon",
@@ -155,7 +113,6 @@ function getMockData(): StockData[] {
       change: 4.96,
       changeValue: "12.01",
       iconColor: "#A855F7",
-      trendData: [245, 247, 249, 250, 251, 252, 253, 254, 254.13]
     },
     {
       ticker: "NVDAon",
@@ -164,7 +121,6 @@ function getMockData(): StockData[] {
       change: 0.97,
       changeValue: "1.76",
       iconColor: "#76B900",
-      trendData: [178, 178.5, 179, 179.2, 179.5, 179.8, 180, 180.1, 180.04]
     },
     {
       ticker: "SPYon",
@@ -173,7 +129,6 @@ function getMockData(): StockData[] {
       change: 1.00,
       changeValue: "6.50",
       iconColor: "#6A1B9A",
-      trendData: [655, 656, 657, 658, 659, 660, 660.5, 661, 661.29],
       category: "Equities ETF"
     },
     {
@@ -183,7 +138,6 @@ function getMockData(): StockData[] {
       change: 2.62,
       changeValue: "0.88",
       iconColor: "#0071C5",
-      trendData: [33.5, 33.7, 33.9, 34, 34.2, 34.4, 34.5, 34.6, 34.66]
     },
     {
       ticker: "FIGon",
@@ -192,7 +146,6 @@ function getMockData(): StockData[] {
       change: 2.20,
       changeValue: "0.74",
       iconColor: "#F24E1E",
-      trendData: [33, 33.3, 33.5, 33.8, 34, 34.1, 34.3, 34.4, 34.49],
       category: "Equities Stock"
     },
     {
@@ -202,9 +155,14 @@ function getMockData(): StockData[] {
       change: 1.09,
       changeValue: "2.24",
       iconColor: "#ED1C24",
-      trendData: [201, 202, 202.5, 203, 203.5, 204, 204.2, 204.4, 204.53],
       category: "Equities Stock"
     }
   ];
+
+  // Generate unique chart data for each asset
+  return mockAssets.map(asset => ({
+    ...asset,
+    trendData: generateMiniChartData(asset.ticker, parseFloat(asset.price), asset.change)
+  }));
 }
 

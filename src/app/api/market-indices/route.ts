@@ -45,44 +45,12 @@ async function fetchIndexData(symbol: string) {
 }
 
 export async function GET() {
-  try {
-    const results: MarketIndex[] = [];
-    
-    for (const [symbol, name] of Object.entries(INDICES)) {
-      const data = await fetchIndexData(symbol);
-      
-      if (data && data.currentPrice > 0) {
-        results.push({
-          name,
-          value: data.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }),
-          change: Math.abs(data.change),
-          isUp: data.change >= 0,
-        });
-      }
-    }
-    
-    // Return mock data if API fails or returns no results
-    if (results.length === 0) {
-      return NextResponse.json({
-        success: true,
-        data: getMockIndices(),
-        timestamp: new Date().toISOString(),
-      });
-    }
-    
-    return NextResponse.json({
-      success: true,
-      data: results,
-      timestamp: new Date().toISOString(),
-    });
-    
-  } catch (error) {
-    return NextResponse.json({
-      success: true,
-      data: getMockIndices(),
-      timestamp: new Date().toISOString(),
-    });
-  }
+  // Always return mock data - no API calls
+  return NextResponse.json({
+    success: true,
+    data: getMockIndices(),
+    timestamp: new Date().toISOString(),
+  });
 }
 
 function getMockIndices(): MarketIndex[] {

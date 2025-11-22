@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { DetailedChart } from '@/components/DetailedChart';
 import TradingInterface from '@/components/TradingInterface';
 import { cn } from '@/lib/utils';
+import { generateDetailedChartData } from '@/lib/chartData';
 
 
 interface AssetData {
@@ -33,7 +34,7 @@ const ASSET_INFO: Record<string, any> = {
   CRCLon: {
     underlyingAssetName: "Circle Internet Group, Inc.",
     underlyingAssetTicker: "CRCL",
-    onchainAddress: "0x3b3C98D7AfF91b7032d81fC25dfe8d8ECFe546CC",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
     sharesPerToken: "1 CRCLon = 1.00 CRCL",
     category: ["Equities", "Stock"],
     chains: ["sepolia", "base", "arbitrum"],
@@ -41,7 +42,7 @@ const ASSET_INFO: Record<string, any> = {
   NVDAon: {
     underlyingAssetName: "NVIDIA Corporation",
     underlyingAssetTicker: "NVDA",
-    onchainAddress: "0x3b3C98D7AfF91b7032d81fC25dfe8d8ECFe546CC",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
     sharesPerToken: "1 NVDAon = 1.00 NVDA",
     category: ["Equities", "Stock"],
     chains: ["sepolia", "base", "arbitrum"],
@@ -200,7 +201,7 @@ export default function AssetPage() {
             {/* Chart */}
             <div className="h-[400px] w-full">
               <DetailedChart
-                data={generateHistoricalData(parseFloat(asset.price), asset.change, timeRange)}
+                data={generateDetailedChartData(ticker, parseFloat(asset.price), asset.change, timeRange)}
                 color={isPositive ? "#10B981" : "#EF4444"}
               />
             </div>
@@ -315,23 +316,4 @@ export default function AssetPage() {
   );
 }
 
-// Generate mock historical data based on current price and time range
-function generateHistoricalData(currentPrice: number, changePercent: number, timeRange: string) {
-  const points = timeRange === '1D' ? 24 : timeRange === '1W' ? 168 : 90;
-  const data = [];
-  const startPrice = currentPrice / (1 + changePercent / 100);
-  
-  for (let i = 0; i < points; i++) {
-    const progress = i / (points - 1);
-    const volatility = Math.random() * 0.02 - 0.01; // +/- 1% volatility
-    const price = startPrice + (currentPrice - startPrice) * progress + currentPrice * volatility;
-    
-    data.push({
-      time: i,
-      price: parseFloat(price.toFixed(2)),
-    });
-  }
-  
-  data[data.length - 1].price = currentPrice;
-  return data;
-}
+// This function is no longer needed - using generateDetailedChartData from lib/chartData.ts

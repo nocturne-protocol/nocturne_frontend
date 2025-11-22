@@ -39,7 +39,7 @@ export function AssetCard({ ticker, name, price, change, changeValue, trendData 
 
   return (
     <Link href={`/${ticker}`}>
-      <div className={cn("rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between h-64 transition-all hover:shadow-md cursor-pointer", bgColor)}>
+      <div className={cn("rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col h-96 transition-all hover:shadow-md cursor-pointer", bgColor)}>
         <div className="flex items-start justify-between mb-4">
            <div className="flex items-center space-x-3">
                <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-gray-800">
@@ -66,7 +66,7 @@ export function AssetCard({ ticker, name, price, change, changeValue, trendData 
            </div>
         </div>
 
-        <div className="w-full h-12 flex items-end">
+        <div className="w-full flex-1 flex items-end mt-auto">
            <Sparkline data={trendData} color={lineColor} />
         </div>
       </div>

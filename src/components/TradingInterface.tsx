@@ -23,7 +23,7 @@ const CHAIN_INFO: Record<number, { name: string; color: string; bgColor: string;
   421614: { name: 'Arbitrum Sepolia', color: 'bg-blue-100', bgColor: 'bg-blue-100', iconPath: '/asset/arbitrum.png' },
 };
 
-const PRIVATE_ERC20_ADDRESS = '0x3b3C98D7AfF91b7032d81fC25dfe8d8ECFe546CC';
+const PRIVATE_ERC20_ADDRESS = '0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7';
 const PLATFORM_WALLET = '0x8F64b8442E110c6DbBA5975EF0b829Ee104f6355';
 const ARBITRUM_SEPOLIA_ID = 421614;
 

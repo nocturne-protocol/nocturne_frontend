@@ -35,20 +35,20 @@ export function Navbar() {
           </Link>
           
           <div className="relative hidden md:block">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" size={16} />
             <input 
               type="text" 
               placeholder="Search assets" 
-              className="pl-10 pr-4 py-2 bg-gray-100 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-gray-200 w-64 transition-all"
+              className="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-900 rounded-md text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-200 dark:focus:ring-gray-700 w-64 transition-all"
             />
           </div>
         </div>
 
         {/* Center: Navigation - Absolutely centered */}
-        <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600 absolute left-1/2 transform -translate-x-1/2">
-            <Link href="#" className="hover:text-black">Explore</Link>
-            <Link href="#" className="hover:text-black">Tools</Link>
-            <Link href="#" className="hover:text-black">Learn</Link>
+        <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600 dark:text-gray-400 absolute left-1/2 transform -translate-x-1/2">
+            <Link href="#" className="hover:text-black dark:hover:text-white transition-colors">Explore</Link>
+            <Link href="#" className="hover:text-black dark:hover:text-white transition-colors">Tools</Link>
+            <Link href="#" className="hover:text-black dark:hover:text-white transition-colors">Learn</Link>
         </nav>
 
         {/* Right: Actions */}

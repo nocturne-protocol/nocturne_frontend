@@ -3,7 +3,7 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
 interface DetailedChartProps {
-  data: { time: number; price: number }[];
+  data: { time: string; price: number }[];
   color?: string;
 }
 
@@ -13,10 +13,10 @@ export function DetailedChart({ data, color = '#10B981' }: DetailedChartProps) {
       const point = payload[0].payload;
       
       return (
-        <div className="bg-gray-900 text-white px-4 py-2 rounded-lg shadow-lg">
+        <div className="bg-gray-900 dark:bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg">
           <div className="font-bold text-lg">${point.price}</div>
           <div className="text-xs text-gray-400">
-            {formatTimeLabel(point.time)}
+            {point.time}
           </div>
         </div>
       );
@@ -45,7 +45,6 @@ export function DetailedChart({ data, color = '#10B981' }: DetailedChartProps) {
           </defs>
           <XAxis
             dataKey="time"
-            tickFormatter={(value) => formatTimeLabel(value)}
             axisLine={false}
             tickLine={false}
             tick={{ fill: '#9CA3AF', fontSize: 12 }}
@@ -77,12 +76,5 @@ export function DetailedChart({ data, color = '#10B981' }: DetailedChartProps) {
       </ResponsiveContainer>
     </div>
   );
-}
-
-function formatTimeLabel(timeIndex: number): string {
-  // Format based on time index
-  // For 1D: show hours
-  const hour = Math.floor(timeIndex % 24);
-  return `11/21 ${hour.toString().padStart(2, '0')}:00`;
 }
 
