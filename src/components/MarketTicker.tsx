@@ -1,15 +1,50 @@
+'use client';
+
 import { ArrowUp, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
-const marketData = [
-  { name: "Dow Jones Industrial Average", value: "46,245.40", change: 1.08, isUp: true },
-  { name: "NASDAQ Composite", value: "22,273.08", change: 0.88, isUp: true },
-  { name: "NYSE Composite", value: "21,182.41", change: 1.29, isUp: true },
-  { name: "CBOE Volatility Index", value: "23.43", change: 11.32, isUp: false },
-  { name: "Treasury Yield 10 Years", value: "4.25", change: 0.50, isUp: false }, // Mocked last one
-];
+interface MarketIndex {
+  name: string;
+  value: string;
+  change: number;
+  isUp: boolean;
+}
 
 export function MarketTicker() {
+  const [marketData, setMarketData] = useState<MarketIndex[]>([]);
+
+  useEffect(() => {
+    const fetchIndices = async () => {
+      try {
+        const response = await fetch('/api/market-indices');
+        const result = await response.json();
+        
+        if (result.data) {
+          setMarketData(result.data);
+        }
+      } catch (error) {
+        console.error('Error fetching market indices:', error);
+      }
+    };
+
+    fetchIndices();
+    
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchIndices, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+  if (marketData.length === 0) {
+    return (
+      <div className="w-full bg-white border-b border-gray-200 py-2 overflow-hidden">
+        <div className="flex items-center justify-center px-4 text-xs font-medium text-gray-400">
+          Loading market data...
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full bg-white border-b border-gray-200 py-2 overflow-hidden">
       <div className="flex items-center space-x-8 animate-scroll px-4 text-xs font-medium text-gray-600 whitespace-nowrap">

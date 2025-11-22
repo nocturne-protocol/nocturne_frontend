@@ -1,24 +1,112 @@
+'use client';
+
 import { AssetList, Asset } from "./AssetList";
+import { useEffect, useState } from "react";
 
-const topGainers: Asset[] = [
-  { ticker: "CRCLon", name: "Circle Internet Group", price: "72.37", change: 10.19, iconColor: "#8B5CF6" },
-  { ticker: "FUTUon", name: "Futu Holdings", price: "161.76", change: 5.36, iconColor: "#2563EB" },
-  { ticker: "HIMSon", name: "Hims & Hers Health", price: "34.85", change: 5.06, iconColor: "#1F2937" },
-];
-
-const trending: Asset[] = [
-  { ticker: "NVDAon", name: "NVIDIA", price: "180.07", change: 0.88, iconColor: "#76B900", marketCap: "$345,490,501" }, // Using market cap as secondary info like image? Image has market cap under price for trending.
-  { ticker: "SPYon", name: "SPDR S&P 500 ETF", price: "660.78", change: 0.0, iconColor: "#6A1B9A", marketCap: "$123,873,392" },
-  { ticker: "INTCon", name: "Intel", price: "34.51", change: 0.0, iconColor: "#0071C5", marketCap: "$105,453,706" },
-];
-
-const newlyAdded: Asset[] = [
-  { ticker: "FIGon", name: "Figma", price: "34.44", change: 0.0, iconColor: "#F24E1E", marketCap: "Equities Stock" }, // Image shows "Equities Stock"
-  { ticker: "AMDon", name: "AMD", price: "203.85", change: 0.0, iconColor: "#ED1C24", marketCap: "Equities Stock" },
-  { ticker: "SPYon", name: "SPDR S&P 500 ETF", price: "660.78", change: 0.0, iconColor: "#6A1B9A", marketCap: "Equities ETF" },
-];
+interface MarketData {
+  ticker: string;
+  name: string;
+  price: string;
+  change: number;
+  changeValue: string;
+  iconColor: string;
+  category?: string;
+}
 
 export function DashboardSummary() {
+  const [topGainers, setTopGainers] = useState<Asset[]>([]);
+  const [trending, setTrending] = useState<Asset[]>([]);
+  const [newlyAdded, setNewlyAdded] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const response = await fetch('/api/market-data');
+        const result = await response.json();
+        
+        if (result.data && result.data.length > 0) {
+          const assets: MarketData[] = result.data;
+          
+          // Top Gainers: Sort by highest positive change
+          const gainers = [...assets]
+            .filter(a => a.change > 0)
+            .sort((a, b) => b.change - a.change)
+            .slice(0, 3)
+            .map(a => ({
+              ticker: a.ticker,
+              name: a.name,
+              price: a.price,
+              change: a.change,
+              iconColor: a.iconColor,
+            }));
+          
+          // Trending: Take the first 3 assets (could be sorted by volume in real scenario)
+          const trendingAssets = assets.slice(0, 3).map(a => ({
+            ticker: a.ticker,
+            name: a.name,
+            price: a.price,
+            change: a.change,
+            iconColor: a.iconColor,
+            marketCap: formatMarketCap(a.price, a.ticker), // Mock market cap based on price
+          }));
+          
+          // Newly Added: Filter assets with category or take last 3
+          const newAssets = assets
+            .filter(a => a.category)
+            .slice(0, 3)
+            .map(a => ({
+              ticker: a.ticker,
+              name: a.name,
+              price: a.price,
+              change: a.change,
+              iconColor: a.iconColor,
+              marketCap: a.category || 'Equities Stock',
+            }));
+          
+          setTopGainers(gainers);
+          setTrending(trendingAssets);
+          setNewlyAdded(newAssets.length > 0 ? newAssets : trendingAssets.map(a => ({...a, marketCap: 'Equities Stock'})));
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+    
+    // Refresh every 60 seconds
+    const interval = setInterval(fetchData, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
+
+  // Mock market cap calculation (in real scenario, would come from API)
+  function formatMarketCap(price: string, ticker: string): string {
+    const priceNum = parseFloat(price);
+    const mockVolume = Math.floor(priceNum * 1000000 * (Math.random() * 2 + 1));
+    return `$${mockVolume.toLocaleString()}`;
+  }
+
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        {Array.from({ length: 3 }).map((_, idx) => (
+          <div key={idx} className="animate-pulse">
+            <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="space-y-4">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div key={i} className="h-16 bg-gray-100 rounded"></div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
       <AssetList title="Top Gainers" badge="24H" assets={topGainers} />

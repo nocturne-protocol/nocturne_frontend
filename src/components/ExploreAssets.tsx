@@ -1,41 +1,55 @@
+'use client';
+
 import { Search, LayoutGrid, List, ChevronDown } from "lucide-react";
 import { AssetCard } from "./AssetCard";
 import { cn } from "@/lib/utils";
+import { useEffect, useState } from "react";
 
 const categories = ["All assets", "ETF", "Technology", "Consumer", "Financials", "Large Cap", "Growth", "Value"];
 
-// Mock data for Explore Assets
-const exploreData = [
-  {
-    ticker: "NVDAon",
-    name: "NVIDIA",
-    price: "180.07",
-    change: -0.07,
-    changeValue: "0.13",
-    iconColor: "#76B900",
-    trendData: [185, 184, 182, 180, 181, 179, 178, 180, 180.07]
-  },
-  {
-    ticker: "SPYon",
-    name: "SPDR S&P 500 ETF",
-    price: "660.78",
-    change: 1.03,
-    changeValue: "6.73",
-    iconColor: "#6A1B9A", // Purple
-    trendData: [650, 652, 655, 654, 658, 660, 662, 660, 660.78]
-  },
-  {
-    ticker: "INTCon",
-    name: "Intel",
-    price: "34.51",
-    change: 4.01,
-    changeValue: "1.33",
-    iconColor: "#0071C5", // Intel Blue
-    trendData: [33, 33.2, 33.5, 33.8, 34, 34.2, 34.5, 34.4, 34.51]
-  }
-];
+interface AssetData {
+  ticker: string;
+  name: string;
+  price: string;
+  change: number;
+  changeValue: string;
+  iconColor: string;
+  trendData: number[];
+  category?: string;
+}
 
 export function ExploreAssets() {
+  const [assets, setAssets] = useState<AssetData[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchMarketData = async () => {
+      try {
+        const response = await fetch('/api/market-data');
+        const result = await response.json();
+        
+        if (result.success && result.data) {
+          setAssets(result.data);
+        } else {
+          // Use fallback data
+          setAssets(result.data || []);
+        }
+      } catch (error) {
+        console.error('Error fetching market data:', error);
+        // Use empty array on error
+        setAssets([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMarketData();
+    
+    // Refresh data every 60 seconds
+    const interval = setInterval(fetchMarketData, 60000);
+    
+    return () => clearInterval(interval);
+  }, []);
   return (
     <section className="space-y-6">
        <div className="flex items-center justify-between mb-6">
@@ -89,9 +103,24 @@ export function ExploreAssets() {
 
        {/* Grid */}
        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {exploreData.map((asset, idx) => (
-             <AssetCard key={idx} {...asset} />
-          ))}
+          {loading ? (
+            // Loading skeleton
+            Array.from({ length: 3 }).map((_, idx) => (
+              <div key={idx} className="rounded-2xl p-6 border border-gray-100 shadow-sm h-64 animate-pulse bg-gray-50">
+                <div className="h-4 bg-gray-200 rounded w-1/3 mb-4"></div>
+                <div className="h-8 bg-gray-200 rounded w-1/2 mb-2"></div>
+                <div className="h-4 bg-gray-200 rounded w-1/4"></div>
+              </div>
+            ))
+          ) : assets.length > 0 ? (
+            assets.map((asset, idx) => (
+              <AssetCard key={idx} {...asset} />
+            ))
+          ) : (
+            <div className="col-span-full text-center py-12 text-gray-500">
+              No market data available
+            </div>
+          )}
        </div>
     </section>
   );
