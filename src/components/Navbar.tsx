@@ -1,11 +1,18 @@
+'use client';
+
 import { Search } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { useWeb3Modal } from '@web3modal/wagmi/react';
+import { useAccount, useDisconnect } from 'wagmi';
 
 export function Navbar() {
+  const { open } = useWeb3Modal();
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
   return (
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="w-full px-8 h-16 flex items-center relative">
+      <div className="w-full px-15 h-16 flex items-center relative">
         {/* Left: Logo and Search */}
         <div className="flex items-center space-x-8">
           <Link href="/" className="flex items-center">
@@ -37,9 +44,29 @@ export function Navbar() {
 
         {/* Right: Actions */}
         <div className="flex items-center space-x-4 ml-auto">
-          <button className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
-            Connect Wallet
-          </button>
+          {isConnected ? (
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => open()}
+                className="bg-gray-100 text-gray-900 px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-200 transition-colors"
+              >
+                {address?.slice(0, 6)}...{address?.slice(-4)}
+              </button>
+              <button
+                onClick={() => disconnect()}
+                className="text-gray-500 hover:text-gray-900 text-sm font-medium transition-colors"
+              >
+                Disconnect
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => open()}
+              className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors"
+            >
+              Connect Wallet
+            </button>
+          )}
         </div>
       </div>
     </header>

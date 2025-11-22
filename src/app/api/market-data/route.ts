@@ -37,7 +37,8 @@ async function fetchStockPrice(symbol: string) {
     });
     
     if (!response.ok) {
-      throw new Error('Failed to fetch from Finnhub');
+      // Silently handle API errors (rate limiting, etc.)
+      return null;
     }
     
     const data = await response.json();
@@ -54,7 +55,7 @@ async function fetchStockPrice(symbol: string) {
       previousClose: data.pc || 0,
     };
   } catch (error) {
-    console.error(`Error fetching ${symbol}:`, error);
+    // Silently handle errors - fallback to mock data
     return null;
   }
 }
