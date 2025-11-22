@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useAccount, useChainId } from 'wagmi';
+import { DollarSign } from 'lucide-react';
 
 interface TradingInterfaceProps {
   ticker: string;
@@ -10,16 +12,31 @@ interface TradingInterfaceProps {
   assetImage: string;
 }
 
+const CHAIN_INFO: Record<number, { name: string; color: string; bgColor: string; iconPath: string }> = {
+  1: { name: 'Ethereum', color: 'bg-blue-100', bgColor: 'bg-blue-100', iconPath: '/asset/ethereum.png' },
+  11155111: { name: 'Sepolia', color: 'bg-gray-100', bgColor: 'bg-gray-100', iconPath: '/asset/ethereum.png' },
+  84532: { name: 'Base Sepolia', color: 'bg-blue-100', bgColor: 'bg-blue-50', iconPath: '/asset/base.png' },
+  421614: { name: 'Arbitrum Sepolia', color: 'bg-blue-100', bgColor: 'bg-blue-100', iconPath: '/asset/arbitrum.png' },
+};
+
 export default function TradingInterface({ ticker, assetName, currentPrice, assetImage }: TradingInterfaceProps) {
+  const { isConnected } = useAccount();
+  const chainId = useChainId();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const [activeTab, setActiveTab] = useState<'buy' | 'sell'>('buy');
   const [payAmount, setPayAmount] = useState<string>('0');
   const [receiveAmount, setReceiveAmount] = useState<string>('0');
 
+  const chainInfo = CHAIN_INFO[chainId] || { name: 'Unknown', color: 'bg-gray-100', bgColor: 'bg-gray-100', iconPath: '/asset/ethereum.png' };
+
   const handlePayAmountChange = (value: string) => {
     setPayAmount(value);
     const numValue = parseFloat(value) || 0;
-    // If Buy: Pay USD -> Receive Token (value / price)
-    // If Sell: Pay Token -> Receive USD (value * price)
     const calculated = activeTab === 'buy' 
       ? numValue / currentPrice 
       : numValue * currentPrice;
@@ -30,8 +47,6 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   const handleReceiveAmountChange = (value: string) => {
     setReceiveAmount(value);
     const numValue = parseFloat(value) || 0;
-    // If Buy: Receive Token <- Pay USD (value * price)
-    // If Sell: Receive USD <- Pay Token (value / price)
     const calculated = activeTab === 'buy'
       ? numValue * currentPrice
       : numValue / currentPrice;
@@ -43,6 +58,23 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
     setActiveTab(tab);
     setPayAmount('0');
     setReceiveAmount('0');
+  };
+
+  // Calculate shares for button text
+  const getButtonText = () => {
+    const numPay = parseFloat(payAmount) || 0;
+    
+    if (numPay === 0) return 'Enter an amount';
+
+    if (activeTab === 'buy') {
+      // For Buy, shares are in receiveAmount
+      const shares = parseFloat(receiveAmount);
+      return `Buy ${shares} Shares`;
+    } else {
+      // For Sell, shares are in payAmount
+      const shares = parseFloat(payAmount);
+      return `Sell ${shares} Shares`;
+    }
   };
 
   return (
@@ -74,12 +106,19 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           </div>
           
           {/* Network Badge */}
-          <div className="ml-auto flex items-center gap-2 bg-blue-100 px-3 py-2 rounded-xl">
-            <div className="w-5 h-5 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-[10px]">◆</span>
+          {mounted && isConnected && (
+            <div className={`ml-auto flex items-center gap-2 ${chainInfo.bgColor} px-3 py-2 rounded-xl`}>
+              <div className={`w-5 h-5 ${chainInfo.color} rounded-full flex items-center justify-center overflow-hidden relative`}>
+                <Image
+                  src={chainInfo.iconPath}
+                  alt={chainInfo.name}
+                  fill
+                  className="object-contain"
+                />
+              </div>
+              <span className="text-gray-900 font-semibold text-sm">{chainInfo.name}</span>
             </div>
-            <span className="text-blue-900 font-semibold text-sm">Ethereum</span>
-          </div>
+          )}
         </div>
 
         {/* Pay Section */}
@@ -96,7 +135,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
             {activeTab === 'buy' ? (
               <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full flex-shrink-0">
                 <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-[10px] font-bold">$</span>
+                  <DollarSign className="w-3 h-3 text-white stroke-[3px]" />
                 </div>
                 <span className="text-gray-900 font-semibold text-sm">USD</span>
               </div>
@@ -108,7 +147,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
                     alt={ticker}
                     width={20}
                     height={20}
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <span className="text-gray-900 font-semibold text-sm">{ticker}</span>
@@ -147,7 +186,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
                     alt={ticker}
                     width={20}
                     height={20}
-                    className="object-cover"
+                    className="object-contain"
                   />
                 </div>
                 <span className="text-gray-900 font-semibold text-sm">{ticker}</span>
@@ -155,7 +194,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
             ) : (
               <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full flex-shrink-0">
                 <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-[10px] font-bold">$</span>
+                  <DollarSign className="w-3 h-3 text-white stroke-[3px]" />
                 </div>
                 <span className="text-gray-900 font-semibold text-sm">USD</span>
               </div>
@@ -180,9 +219,9 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           </div>
         </div>
 
-        {/* Sign In Button */}
+        {/* Action Button */}
         <button className="w-full bg-gray-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-colors shadow-lg mb-6">
-          Sign In to Continue
+          {getButtonText()}
         </button>
 
         {/* Disclaimer */}

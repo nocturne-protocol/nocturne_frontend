@@ -36,7 +36,7 @@ const ASSET_INFO: Record<string, any> = {
     onchainAddress: "0x3632...3fae",
     sharesPerToken: "1 CRCLon = 1.00 CRCL",
     category: ["Equities", "Stock"],
-    chains: ["ethereum", "bitcoin"],
+    chains: ["sepolia", "base", "arbitrum"],
   },
   NVDAon: {
     underlyingAssetName: "NVIDIA Corporation",
@@ -44,9 +44,15 @@ const ASSET_INFO: Record<string, any> = {
     onchainAddress: "0x1234...5678",
     sharesPerToken: "1 NVDAon = 1.00 NVDA",
     category: ["Equities", "Stock"],
-    chains: ["ethereum"],
+    chains: ["sepolia", "base", "arbitrum"],
   },
   // Add more as needed
+};
+
+const CHAIN_ICONS: Record<string, string> = {
+  'arbitrum': '/asset/arbitrum.png',
+  'base': '/asset/base.png',
+  'sepolia': '/asset/ethereum.png',
 };
 
 export default function AssetPage() {
@@ -233,8 +239,13 @@ export default function AssetPage() {
                 <span className="text-gray-500 text-lg">Supported Chains</span>
                 <div className="flex gap-2">
                   {info.chains.map((chain: string) => (
-                    <div key={chain} className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
-                      <span className="text-xs">⛓️</span>
+                    <div key={chain} className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center overflow-hidden relative border border-gray-200">
+                      <Image
+                        src={CHAIN_ICONS[chain.toLowerCase()] || '/asset/ethereum.png'}
+                        alt={chain}
+                        fill
+                        className="object-contain p-1.5"
+                      />
                     </div>
                   ))}
                 </div>
