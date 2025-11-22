@@ -16,7 +16,7 @@ interface AssetCardProps {
 
 export function AssetCard({ ticker, name, price, change, changeValue, trendData }: AssetCardProps) {
   const isPositive = change >= 0;
-  const bgColor = isPositive ? "bg-white" : "bg-red-50";
+  const bgColor = isPositive ? "bg-white dark:bg-gray-900" : "bg-red-50 dark:bg-red-950/30";
   const lineColor = isPositive ? "#10B981" : "#EF4444";
   
   // Get the asset image path based on ticker
@@ -39,10 +39,10 @@ export function AssetCard({ ticker, name, price, change, changeValue, trendData 
 
   return (
     <Link href={`/${ticker}`}>
-      <div className={cn("rounded-2xl p-6 border border-gray-100 shadow-sm flex flex-col justify-between h-64 transition-all hover:shadow-md cursor-pointer", bgColor)}>
+      <div className={cn("rounded-2xl p-6 border border-gray-100 dark:border-gray-800 shadow-sm flex flex-col justify-between h-64 transition-all hover:shadow-md cursor-pointer", bgColor)}>
         <div className="flex items-start justify-between mb-4">
            <div className="flex items-center space-x-3">
-               <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-white">
+               <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center bg-white dark:bg-gray-800">
                    <Image 
                      src={getAssetImage(ticker)} 
                      alt={name} 
@@ -52,15 +52,15 @@ export function AssetCard({ ticker, name, price, change, changeValue, trendData 
                    />
                 </div>
                 <div>
-                   <h3 className="text-gray-900 font-bold">{ticker}</h3>
-                   <p className="text-gray-500 text-xs uppercase">{name}</p>
+                   <h3 className="text-gray-900 dark:text-gray-100 font-bold">{ticker}</h3>
+                   <p className="text-gray-500 dark:text-gray-400 text-xs uppercase">{name}</p>
                 </div>
            </div>
         </div>
 
         <div className="mb-4">
-           <div className="text-3xl font-bold text-gray-900">${price}</div>
-           <div className={cn("flex items-center text-sm font-medium mt-1", isPositive ? "text-green-600" : "text-red-600")}>
+           <div className="text-3xl font-bold text-gray-900 dark:text-gray-100">${price}</div>
+           <div className={cn("flex items-center text-sm font-medium mt-1", isPositive ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500")}>
               {isPositive ? <ArrowUp size={14} className="mr-1" /> : <ArrowDown size={14} className="mr-1" />}
               ${changeValue} ({Math.abs(change).toFixed(2)}%) 24H
            </div>

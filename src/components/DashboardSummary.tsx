@@ -108,10 +108,10 @@ export function DashboardSummary() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
         {Array.from({ length: 3 }).map((_, idx) => (
           <div key={idx} className="animate-pulse">
-            <div className="h-6 bg-gray-200 rounded w-1/3 mb-4"></div>
+            <div className="h-6 bg-gray-200 dark:bg-gray-800 rounded w-1/3 mb-4"></div>
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="h-16 bg-gray-100 rounded"></div>
+                <div key={i} className="h-16 bg-gray-100 dark:bg-gray-900 rounded"></div>
               ))}
             </div>
           </div>

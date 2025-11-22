@@ -7,6 +7,8 @@ import { DollarSign } from 'lucide-react';
 // EthCrypto removed from top-level imports to avoid SSR issues
 // import EthCrypto from 'eth-crypto';
 
+import { toast } from 'sonner';
+
 interface TradingInterfaceProps {
   ticker: string;
   assetName: string;
@@ -120,7 +122,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
     }
 
     if (!isConnected || !address) {
-      alert('Please connect your wallet first');
+      toast.error('Please connect your wallet first');
       return;
     }
 
@@ -134,7 +136,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
     }
 
     if (!encryptionPublicKey) {
-      alert('Encryption key not found. Make sure you are on the correct network.');
+      toast.error('Encryption key not found. Make sure you are on the correct network.');
       return;
     }
 
@@ -191,12 +193,14 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
       }
 
       console.log('Transaction confirmed:', txHash);
-      alert(`${activeTab === 'buy' ? 'Buy' : 'Sell'} transaction successful! Hash: ${txHash}`);
+      toast.success(`${activeTab === 'buy' ? 'Buy' : 'Sell'} transaction successful!`, {
+        description: `Hash: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`
+      });
 
     } catch (error: any) {
       console.error('Transaction failed:', error);
       const msg = error?.reason || error?.message || 'Unknown error';
-      alert(`Transaction failed: ${msg}`);
+      toast.error(`Transaction failed: ${msg}`);
     } finally {
       setIsProcessing(false);
     }
@@ -204,16 +208,16 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
 
   return (
     <div className="w-full max-w-md">
-      <div className="bg-gray-100 rounded-3xl p-6 mb-4">
+      <div className="bg-gray-100 dark:bg-gray-900 rounded-3xl p-6 mb-4 transition-colors">
         {/* Buy/Sell Tabs */}
         <div className="flex mb-6">
-          <div className="bg-gray-200 p-1 rounded-xl inline-flex">
+          <div className="bg-gray-200 dark:bg-gray-800 p-1 rounded-xl inline-flex">
             <button
               onClick={() => handleTabChange('buy')}
               className={`px-6 py-2 rounded-lg font-semibold text-sm transition-colors ${
                 activeTab === 'buy'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
             >
               Buy
@@ -222,8 +226,8 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
               onClick={() => handleTabChange('sell')}
               className={`px-6 py-2 rounded-lg font-semibold text-sm transition-colors ${
                 activeTab === 'sell'
-                  ? 'bg-white text-gray-900 shadow-sm'
-                  : 'text-gray-500 hover:text-gray-900'
+                  ? 'bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 shadow-sm'
+                  : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100'
               }`}
             >
               Sell
@@ -232,8 +236,8 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           
           {/* Network Badge */}
           {mounted && isConnected && (
-            <div className={`ml-auto flex items-center gap-2 ${chainInfo.bgColor} px-3 py-2 rounded-xl`}>
-              <div className={`w-5 h-5 ${chainInfo.color} rounded-full flex items-center justify-center overflow-hidden relative`}>
+            <div className={`ml-auto flex items-center gap-2 ${chainInfo.bgColor} dark:bg-gray-800 px-3 py-2 rounded-xl`}>
+              <div className={`w-5 h-5 ${chainInfo.color} dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden relative`}>
                 <Image
                   src={chainInfo.iconPath}
                   alt={chainInfo.name}
@@ -241,31 +245,31 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
                   className="object-contain"
                 />
               </div>
-              <span className="text-gray-900 font-semibold text-sm">{chainInfo.name}</span>
+              <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{chainInfo.name}</span>
             </div>
           )}
         </div>
 
         {/* Pay Section */}
-        <div className="bg-white rounded-2xl p-4 mb-2 shadow-sm relative z-0">
-          <label className="text-gray-400 text-xs font-medium mb-1 block">Pay</label>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-2 shadow-sm relative z-0 transition-colors">
+          <label className="text-gray-400 dark:text-gray-500 text-xs font-medium mb-1 block">Pay</label>
           <div className="flex items-center justify-between">
             <input
               type="text"
               value={payAmount}
               onChange={(e) => handlePayAmountChange(e.target.value)}
-              className="bg-transparent text-gray-900 text-3xl font-bold outline-none w-full"
+              className="bg-transparent text-gray-900 dark:text-gray-100 text-3xl font-bold outline-none w-full placeholder:text-gray-300 dark:placeholder:text-gray-600"
               placeholder="0"
             />
             {activeTab === 'buy' ? (
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full flex-shrink-0">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full flex-shrink-0">
+                <div className="w-5 h-5 bg-blue-500 dark:bg-blue-600 rounded-full flex items-center justify-center">
                   <DollarSign className="w-3 h-3 text-white stroke-[3px]" />
                 </div>
-                <span className="text-gray-900 font-semibold text-sm">USD</span>
+                <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">USD</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full flex-shrink-0">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full flex-shrink-0">
                 <div className="w-5 h-5 relative rounded-full overflow-hidden">
                   <Image
                     src={assetImage}
@@ -275,7 +279,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
                     className="object-contain"
                   />
                 </div>
-                <span className="text-gray-900 font-semibold text-sm">{ticker}</span>
+                <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{ticker}</span>
               </div>
             )}
           </div>
@@ -283,9 +287,9 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
 
         {/* Swap Arrow */}
         <div className="flex justify-center -my-4 relative z-10">
-          <div className="bg-gray-100 border-[3px] border-gray-100 rounded-full p-1">
-            <div className="bg-white rounded-full p-1.5 shadow-sm">
-              <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="bg-gray-100 dark:bg-gray-900 border-[3px] border-gray-100 dark:border-gray-900 rounded-full p-1">
+            <div className="bg-white dark:bg-gray-800 rounded-full p-1.5 shadow-sm">
+              <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
               </svg>
             </div>
@@ -293,18 +297,18 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         </div>
 
         {/* Receive Section */}
-        <div className="bg-white rounded-2xl p-4 mb-6 shadow-sm pt-6">
-          <label className="text-gray-400 text-xs font-medium mb-1 block">Receive</label>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl p-4 mb-6 shadow-sm pt-6 transition-colors">
+          <label className="text-gray-400 dark:text-gray-500 text-xs font-medium mb-1 block">Receive</label>
           <div className="flex items-center justify-between">
             <input
               type="text"
               value={receiveAmount}
               onChange={(e) => handleReceiveAmountChange(e.target.value)}
-              className="bg-transparent text-gray-900 text-3xl font-bold outline-none w-full"
+              className="bg-transparent text-gray-900 dark:text-gray-100 text-3xl font-bold outline-none w-full placeholder:text-gray-300 dark:placeholder:text-gray-600"
               placeholder="0"
             />
             {activeTab === 'buy' ? (
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full flex-shrink-0">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full flex-shrink-0">
                 <div className="w-5 h-5 relative rounded-full overflow-hidden">
                   <Image
                     src={assetImage}
@@ -314,14 +318,14 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
                     className="object-contain"
                   />
                 </div>
-                <span className="text-gray-900 font-semibold text-sm">{ticker}</span>
+                <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">{ticker}</span>
               </div>
             ) : (
-              <div className="flex items-center gap-2 bg-gray-100 px-3 py-1.5 rounded-full flex-shrink-0">
-                <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+              <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 px-3 py-1.5 rounded-full flex-shrink-0">
+                <div className="w-5 h-5 bg-blue-500 dark:bg-blue-600 rounded-full flex items-center justify-center">
                   <DollarSign className="w-3 h-3 text-white stroke-[3px]" />
                 </div>
-                <span className="text-gray-900 font-semibold text-sm">USD</span>
+                <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">USD</span>
               </div>
             )}
           </div>
@@ -330,17 +334,17 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         {/* Rate Info */}
         <div className="mb-6 space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-gray-500 text-sm">Rate</span>
-            <span className="text-gray-900 text-sm font-medium">
+            <span className="text-gray-500 dark:text-gray-400 text-sm">Rate</span>
+            <span className="text-gray-900 dark:text-gray-100 text-sm font-medium">
               1 {ticker} = {currentPrice.toFixed(2)} USD (${currentPrice.toFixed(2)})
             </span>
           </div>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1">
-              <span className="text-gray-500 text-sm">Shares Per Token</span>
-              <div className="w-4 h-4 bg-gray-200 rounded-full flex items-center justify-center text-[10px] text-gray-500 font-bold">?</div>
+              <span className="text-gray-500 dark:text-gray-400 text-sm">Shares Per Token</span>
+              <div className="w-4 h-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center text-[10px] text-gray-500 dark:text-gray-400 font-bold">?</div>
             </div>
-            <span className="text-gray-900 text-sm font-medium">1 {ticker} = 1.00 {ticker.replace('on', '')}</span>
+            <span className="text-gray-900 dark:text-gray-100 text-sm font-medium">1 {ticker} = 1.00 {ticker.replace('on', '')}</span>
           </div>
         </div>
 
@@ -350,15 +354,15 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           disabled={isProcessing || parseFloat(payAmount) === 0}
           className={`w-full font-bold py-4 rounded-xl transition-colors shadow-lg mb-6 ${
             isProcessing || parseFloat(payAmount) === 0
-              ? 'bg-gray-900 text-white cursor-not-allowed' // Keep it black but disabled cursor
-              : 'bg-gray-900 hover:bg-black text-white'
+              ? 'bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 cursor-not-allowed' // Keep it black/white but disabled cursor
+              : 'bg-gray-900 dark:bg-gray-100 hover:bg-black dark:hover:bg-white text-white dark:text-gray-900'
           }`}
         >
           {getButtonText()}
         </button>
 
         {/* Disclaimer */}
-        <p className="text-gray-400 text-[10px] leading-relaxed text-justify">
+        <p className="text-gray-400 dark:text-gray-500 text-[10px] leading-relaxed text-justify">
           Global Markets tokens have not been registered under the US Securities Act of 1933, as amended, 
           or the securities or other laws of any other jurisdiction, and may not be offered or sold in the 
           US or to US persons unless registered under the Act or exempt therefrom. The tokens are offered 
@@ -368,33 +372,33 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
       </div>
 
       {/* Also Available On */}
-      <div className="bg-gray-50 rounded-xl p-4 mb-4 flex items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer">
-        <span className="text-gray-900 font-semibold text-sm">Also Available On</span>
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 mb-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer">
+        <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">Also Available On</span>
         <div className="flex items-center gap-3">
           <div className="flex -space-x-2">
-             <div className="w-6 h-6 bg-black rounded-full border-2 border-white flex items-center justify-center z-10">
-               <span className="text-white text-[8px] font-bold">B</span>
+             <div className="w-6 h-6 bg-black dark:bg-white rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center z-10">
+               <span className="text-white dark:text-black text-[8px] font-bold">B</span>
              </div>
-             <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-white flex items-center justify-center">
+             <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
                <span className="text-black text-[8px] font-bold">Op</span>
              </div>
           </div>
-          <span className="text-gray-500 text-sm font-medium">& 3 more</span>
-          <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">& 3 more</span>
+          <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
           </svg>
         </div>
       </div>
 
       {/* Need Help */}
-      <div className="bg-gray-50 rounded-xl p-4 flex items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer">
+      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer">
         <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-gray-900 rounded-full flex items-center justify-center">
-            <span className="text-white text-xs font-bold">?</span>
+          <div className="w-6 h-6 bg-gray-900 dark:bg-gray-100 rounded-full flex items-center justify-center">
+            <span className="text-white dark:text-gray-900 text-xs font-bold">?</span>
           </div>
-          <span className="text-gray-900 font-semibold text-sm">Need help?</span>
+          <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">Need help?</span>
         </div>
-        <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
         </svg>
       </div>

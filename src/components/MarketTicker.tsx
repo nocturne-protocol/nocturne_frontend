@@ -44,7 +44,7 @@ const getInitialData = (): MarketIndex[] => {
       change: 0.50, 
       isUp: false 
     },
-  ];
+];
 };
 
 export function MarketTicker() {
@@ -73,25 +73,25 @@ export function MarketTicker() {
   }, []);
 
   return (
-    <div className="w-full bg-white border-b border-gray-200 py-2 overflow-hidden relative">
-      <div className="flex items-center space-x-8 animate-scroll text-xs font-medium text-gray-600 whitespace-nowrap">
+    <div className="w-full bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-2 overflow-hidden relative transition-colors">
+      <div className="flex items-center space-x-8 animate-scroll text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
         {/* First set */}
         {marketData.map((item, index) => (
           <div key={index} className="flex items-center space-x-2 flex-shrink-0">
-            <span className="text-gray-500">{item.name}</span>
-            <span className="text-black font-semibold">{item.value}</span>
-            <span className={cn("flex items-center", item.isUp ? "text-green-600" : "text-red-600")}>
+            <span className="text-gray-500 dark:text-gray-400">{item.name}</span>
+            <span className="text-black dark:text-white font-semibold">{item.value}</span>
+            <span className={cn("flex items-center", item.isUp ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500")}>
               {item.isUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
               {item.change.toFixed(2)}%
             </span>
           </div>
         ))}
         {/* Duplicate for seamless loop */}
-        {marketData.map((item, index) => (
+          {marketData.map((item, index) => (
           <div key={`dup-${index}`} className="flex items-center space-x-2 flex-shrink-0">
-            <span className="text-gray-500">{item.name}</span>
-            <span className="text-black font-semibold">{item.value}</span>
-            <span className={cn("flex items-center", item.isUp ? "text-green-600" : "text-red-600")}>
+            <span className="text-gray-500 dark:text-gray-400">{item.name}</span>
+            <span className="text-black dark:text-white font-semibold">{item.value}</span>
+            <span className={cn("flex items-center", item.isUp ? "text-green-600 dark:text-green-500" : "text-red-600 dark:text-red-500")}>
               {item.isUp ? <ArrowUp size={12} /> : <ArrowDown size={12} />}
               {item.change.toFixed(2)}%
             </span>
