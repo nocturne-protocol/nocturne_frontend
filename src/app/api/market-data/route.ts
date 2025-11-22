@@ -6,7 +6,7 @@ const ALPHA_VANTAGE_API_KEY = process.env.ALPHA_VANTAGE_API_KEY || 'demo';
 
 // Mapping of tickers to real stock symbols and company names
 const TICKER_MAP: Record<string, { symbol: string; name: string; category?: string }> = {
-  'CRCLon': { symbol: 'CRM', name: 'Circle Internet Group' },
+  'CRCLon': { symbol: 'CRCL', name: 'Circle Internet Group' },
   'FUTUon': { symbol: 'FUTU', name: 'Futu Holdings' },
   'ACNon': { symbol: 'ACN', name: 'Accenture' },
   'NVDAon': { symbol: 'NVDA', name: 'NVIDIA' },
@@ -77,14 +77,12 @@ function generateTrendData(currentPrice: number, changePercent: number): number[
 
 export async function GET() {
   try {
-    const results: StockData[] = [];
-    
-    // Fetch data for all tickers
-    for (const [displayTicker, tickerInfo] of Object.entries(TICKER_MAP)) {
+    // Fetch all data in parallel for better performance
+    const fetchPromises = Object.entries(TICKER_MAP).map(async ([displayTicker, tickerInfo]) => {
       const stockData = await fetchStockPrice(tickerInfo.symbol);
       
-      if (stockData) {
-        results.push({
+      if (stockData && stockData.currentPrice > 0) {
+        return {
           ticker: displayTicker,
           name: tickerInfo.name,
           price: stockData.currentPrice.toFixed(2),
@@ -93,16 +91,20 @@ export async function GET() {
           iconColor: '#000000',
           trendData: generateTrendData(stockData.currentPrice, stockData.change),
           category: tickerInfo.category,
-        });
+        };
       }
-    }
+      return null;
+    });
     
-    // If no results (API failed), return mock data
-    if (results.length === 0) {
+    const results = (await Promise.all(fetchPromises)).filter(r => r !== null) as StockData[];
+    
+    // If we don't have all 8 assets, use mock data
+    if (results.length < 8) {
       return NextResponse.json({
-        success: false,
-        message: 'Using mock data. Please add FINNHUB_API_KEY to .env.local',
+        success: true,
         data: getMockData(),
+        timestamp: new Date().toISOString(),
+        isMockData: true,
       });
     }
     
@@ -110,15 +112,17 @@ export async function GET() {
       success: true,
       data: results,
       timestamp: new Date().toISOString(),
+      isMockData: false,
     });
     
   } catch (error) {
     console.error('Error in market-data API:', error);
     return NextResponse.json({
-      success: false,
-      message: 'Error fetching market data',
+      success: true,
       data: getMockData(),
-    }, { status: 500 });
+      timestamp: new Date().toISOString(),
+      isMockData: true,
+    });
   }
 }
 

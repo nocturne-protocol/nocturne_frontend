@@ -21,7 +21,6 @@ interface AssetData {
 export function ExploreAssets() {
   const [assets, setAssets] = useState<AssetData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     const fetchMarketData = async () => {
@@ -31,19 +30,18 @@ export function ExploreAssets() {
         });
         const result = await response.json();
         
-        if (result.success && result.data) {
+        if (result.success && result.data && result.data.length >= 8) {
+          // Only update if we have all 8 assets
           setAssets(result.data);
-          setLastUpdate(new Date().toLocaleTimeString());
-        } else {
-          // Use fallback data
-          setAssets(result.data || []);
-          setLastUpdate(new Date().toLocaleTimeString());
+          setLoading(false);
+        } else if (result.data && result.data.length > 0) {
+          // Use partial data but still show something
+          setAssets(result.data);
+          setLoading(false);
         }
       } catch (error) {
         console.error('Error fetching market data:', error);
-        // Use empty array on error
         setAssets([]);
-      } finally {
         setLoading(false);
       }
     };
@@ -58,15 +56,7 @@ export function ExploreAssets() {
   return (
     <section className="space-y-6">
        <div className="flex items-center justify-between mb-6">
-         <div>
-           <h2 className="text-2xl font-medium text-gray-900">Explore Assets</h2>
-           {lastUpdate && (
-             <div className="text-xs text-gray-400 mt-1 flex items-center gap-2">
-               <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-               Last update: {lastUpdate} • Auto-refresh every 60s
-             </div>
-           )}
-         </div>
+         <h2 className="text-2xl font-medium text-gray-900">Explore Assets</h2>
        </div>
 
        {/* Filters and Search */}

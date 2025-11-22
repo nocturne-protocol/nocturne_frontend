@@ -18,7 +18,6 @@ export function DashboardSummary() {
   const [trending, setTrending] = useState<Asset[]>([]);
   const [newlyAdded, setNewlyAdded] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -28,7 +27,7 @@ export function DashboardSummary() {
         });
         const result = await response.json();
         
-        if (result.data && result.data.length > 0) {
+        if (result.data && result.data.length >= 8) {
           const assets: MarketData[] = result.data;
           
           // Create a map for easy lookup
@@ -75,14 +74,16 @@ export function DashboardSummary() {
               marketCap: a.category || 'Equities Stock',
             }));
           
-          setTopGainers(gainers);
-          setTrending(trendingAssets);
-          setNewlyAdded(newAssets);
-          setLastUpdate(new Date().toLocaleTimeString());
+          // Only update if we have all the data
+          if (gainers.length === 3 && trendingAssets.length === 3 && newAssets.length === 3) {
+            setTopGainers(gainers);
+            setTrending(trendingAssets);
+            setNewlyAdded(newAssets);
+            setLoading(false);
+          }
         }
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
-      } finally {
         setLoading(false);
       }
     };
@@ -120,18 +121,10 @@ export function DashboardSummary() {
   }
 
   return (
-    <div>
-      {lastUpdate && (
-        <div className="text-xs text-gray-400 mb-4 flex items-center gap-2">
-          <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-          Last update: {lastUpdate} • Auto-refresh every 60s
-        </div>
-      )}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-        <AssetList title="Top Gainers" badge="24H" assets={topGainers} />
-        <AssetList title="Trending" badge="24H" assets={trending} />
-        <AssetList title="Newly Added" assets={newlyAdded} />
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+      <AssetList title="Top Gainers" badge="24H" assets={topGainers} />
+      <AssetList title="Trending" badge="24H" assets={trending} />
+      <AssetList title="Newly Added" assets={newlyAdded} />
     </div>
   );
 }
