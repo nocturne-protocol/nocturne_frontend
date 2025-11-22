@@ -4,9 +4,6 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAccount, useChainId, useWriteContract, useReadContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
 import { DollarSign } from 'lucide-react';
-// EthCrypto removed from top-level imports to avoid SSR issues
-// import EthCrypto from 'eth-crypto';
-
 import { toast } from 'sonner';
 
 interface TradingInterfaceProps {
@@ -60,13 +57,6 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   const [receiveAmount, setReceiveAmount] = useState<string>('0');
 
   // Contract Hooks
-  const { data: encryptionPublicKey } = useReadContract({
-    address: PRIVATE_ERC20_ADDRESS,
-    abi: PRIVATE_ERC20_ABI,
-    functionName: 'encryptionPublicKey',
-    chainId: ARBITRUM_SEPOLIA_ID,
-  });
-
   const { writeContractAsync } = useWriteContract();
 
   const chainInfo = CHAIN_INFO[chainId] || { name: 'Unknown', color: 'bg-gray-100', bgColor: 'bg-gray-100', iconPath: '/asset/ethereum.png' };
@@ -135,29 +125,33 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
       }
     }
 
-    if (!encryptionPublicKey) {
-      toast.error('Encryption key not found. Make sure you are on the correct network.');
+    // Get public key from environment variable
+    const publicKeyHex = process.env.NEXT_PUBLIC_ENCRYPTION_PUBLIC_KEY;
+    if (!publicKeyHex) {
+      toast.error('Encryption public key not configured.');
       return;
     }
 
     setIsProcessing(true);
 
     try {
-      // Dynamically import EthCrypto to avoid SSR issues
-      const EthCrypto = (await import('eth-crypto')).default;
+      // Dynamically import eciesjs to avoid SSR issues
+      const { encrypt, PublicKey } = await import('eciesjs');
 
-      // 1. Convert encryption key from bytes (hex) to string format
-      const publicKey = encryptionPublicKey.toString().slice(2); // Remove '0x'
+      // 1. Convert public key from hex to PublicKey object
+      const publicKey = PublicKey.fromHex(publicKeyHex);
 
-      // 2. Encrypt the amount
-      const encryptedObject = await EthCrypto.encryptWithPublicKey(
-        publicKey,
-        sharesAmount.toString()
-      );
-      
-      // 3. Convert encrypted object to string/bytes for the contract
-      const encryptedString = EthCrypto.cipher.stringify(encryptedObject);
-      const encryptedBytes = `0x${Buffer.from(encryptedString).toString('hex')}`;
+      // 2. Encode the amount as bytes
+      const encoder = new TextEncoder();
+      const amountBytes = encoder.encode(sharesAmount.toString());
+
+      // 3. Encrypt the amount with the public key
+      const encrypted = encrypt(publicKey.uncompressed, amountBytes);
+
+      // 4. Convert encrypted bytes to hex string for the contract
+      const encryptedHex = '0x' + Array.from(encrypted)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
 
       let txHash: string;
 
@@ -166,12 +160,13 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         // Sender: User Wallet (via Wagmi)
         // Function: mint (to: user, amount: encrypted)
         console.log('Initiating BUY transaction from User Wallet (Mint)...');
+        console.log('Encrypted amount:', encryptedHex);
         
         txHash = await writeContractAsync({
           address: PRIVATE_ERC20_ADDRESS,
           abi: PRIVATE_ERC20_ABI,
           functionName: 'mint',
-          args: [address, encryptedBytes as `0x${string}`],
+          args: [address, encryptedHex as `0x${string}`],
           chainId: ARBITRUM_SEPOLIA_ID,
         });
         
@@ -180,6 +175,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         // Sender: User Wallet (via Wagmi)
         // Function: transfer (to: platform, amount: encrypted)
         console.log('Initiating SELL transaction from User Wallet (Transfer)...');
+        console.log('Encrypted amount:', encryptedHex);
 
         const destinationAddress = PLATFORM_WALLET;
 
@@ -187,7 +183,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           address: PRIVATE_ERC20_ADDRESS,
           abi: PRIVATE_ERC20_ABI,
           functionName: 'transfer',
-          args: [destinationAddress, encryptedBytes as `0x${string}`],
+          args: [destinationAddress, encryptedHex as `0x${string}`],
           chainId: ARBITRUM_SEPOLIA_ID,
         });
       }
