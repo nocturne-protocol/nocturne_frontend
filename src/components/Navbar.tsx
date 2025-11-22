@@ -5,7 +5,7 @@ import Image from "next/image";
 export function Navbar() {
   return (
     <header className="w-full bg-white border-b border-gray-200 sticky top-0 z-50">
-      <div className="w-full px-8 h-16 flex items-center justify-between">
+      <div className="w-full px-8 h-16 flex items-center relative">
         {/* Left: Logo and Search */}
         <div className="flex items-center space-x-8">
           <Link href="/" className="flex items-center">
@@ -28,15 +28,15 @@ export function Navbar() {
           </div>
         </div>
 
-        {/* Center: Navigation */}
-        <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600">
+        {/* Center: Navigation - Absolutely centered */}
+        <nav className="hidden md:flex items-center space-x-8 text-sm font-medium text-gray-600 absolute left-1/2 transform -translate-x-1/2">
             <Link href="#" className="hover:text-black">Explore</Link>
             <Link href="#" className="hover:text-black">Tools</Link>
             <Link href="#" className="hover:text-black">Learn</Link>
         </nav>
 
         {/* Right: Actions */}
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-4 ml-auto">
           <button className="bg-black text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-gray-800 transition-colors">
             Connect Wallet
           </button>
