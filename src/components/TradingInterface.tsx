@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useAccount, useChainId, useWriteContract, useReadContract, useSwitchChain } from 'wagmi';
-import { DollarSign } from 'lucide-react';
+import { DollarSign, Copy, Check, X } from 'lucide-react'; // Added icons
 import { toast } from 'sonner';
 
 interface TradingInterfaceProps {
@@ -49,6 +49,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   const [isProcessing, setIsProcessing] = useState(false);
   const [decryptedBalance, setDecryptedBalance] = useState<string | null>(null);
   const [isLoadingBalance, setIsLoadingBalance] = useState(false);
+  const [showBankTransferModal, setShowBankTransferModal] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -315,6 +316,21 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
       }
     }
 
+    // For BUY, show bank transfer modal first
+    if (activeTab === 'buy') {
+      setShowBankTransferModal(true);
+      return;
+    }
+
+    // For SELL, proceed directly
+    await executeSellTransaction(sharesAmount);
+  };
+
+  const executeBuyTransaction = async (sharesAmount: number) => {
+    if (!isConnected || !address) {
+      return;
+    }
+
     // Get public key from environment variable
     const publicKeyHex = process.env.NEXT_PUBLIC_ENCRYPTION_PUBLIC_KEY;
     if (!publicKeyHex) {
@@ -343,72 +359,125 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         .map(b => b.toString(16).padStart(2, '0'))
         .join('');
 
-      let txHash: string;
+      // --- BUY LOGIC ---
+      // Transfer from platform wallet to user
+      console.log('Initiating BUY transaction from Platform Wallet (Transfer)...');
+      console.log('Encrypted amount:', encryptedHex);
 
-      if (activeTab === 'buy') {
-        // --- BUY LOGIC ---
-        // Transfer from platform wallet to user
-        // Using platform private key (same method as SELL but with platform key)
-        console.log('Initiating BUY transaction from Platform Wallet (Transfer)...');
-        console.log('Encrypted amount:', encryptedHex);
-
-        // Get platform private key from environment
-        const platformPrivateKey = process.env.NEXT_PUBLIC_PLATFORM_PRIVATE_KEY;
-        if (!platformPrivateKey) {
-          throw new Error('Platform private key not configured');
-        }
-
-        // Dynamically import ethers (v5 syntax)
-        const ethers = await import('ethers');
-
-        // Create provider and wallet with platform private key
-        const provider = new ethers.providers.JsonRpcProvider(
-          process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC
-        );
-        const platformWallet = new ethers.Wallet(platformPrivateKey, provider);
-
-        // Create contract instance with platform wallet
-        const contract = new ethers.Contract(
-          PRIVATE_ERC20_ADDRESS,
-          PRIVATE_ERC20_ABI,
-          platformWallet
-        );
-
-        // Execute transfer from platform wallet to user
-        const tx = await contract.transfer(address, encryptedHex);
-        console.log('Transaction sent:', tx.hash);
-
-        // Wait for confirmation
-        await tx.wait();
-        txHash = tx.hash;
-        
-      } else {
-        // --- SELL LOGIC ---
-        // Sender: User Wallet (via Wagmi)
-        // Function: transfer (to: platform, amount: encrypted)
-        console.log('Initiating SELL transaction from User Wallet (Transfer)...');
-        console.log('Encrypted amount:', encryptedHex);
-
-        const destinationAddress = PLATFORM_WALLET;
-
-        txHash = await writeContractAsync({
-          address: PRIVATE_ERC20_ADDRESS,
-          abi: PRIVATE_ERC20_ABI,
-          functionName: 'transfer',
-          args: [destinationAddress, encryptedHex as `0x${string}`],
-          chainId: ARBITRUM_SEPOLIA_ID,
-        });
+      // Get platform private key from environment
+      const platformPrivateKey = process.env.NEXT_PUBLIC_PLATFORM_PRIVATE_KEY;
+      if (!platformPrivateKey) {
+        throw new Error('Platform private key not configured');
       }
 
+      // Dynamically import ethers (v5 syntax)
+      const ethers = await import('ethers');
+
+      // Create provider and wallet with platform private key
+      const provider = new ethers.providers.JsonRpcProvider(
+        process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC
+      );
+      const platformWallet = new ethers.Wallet(platformPrivateKey, provider);
+
+      // Create contract instance with platform wallet
+      const contract = new ethers.Contract(
+        PRIVATE_ERC20_ADDRESS,
+        PRIVATE_ERC20_ABI,
+        platformWallet
+      );
+
+      // Execute transfer from platform wallet to user
+      const tx = await contract.transfer(address, encryptedHex);
+      console.log('Transaction sent:', tx.hash);
+
+      // Wait for confirmation
+      await tx.wait();
+      const txHash = tx.hash;
+
       console.log('Transaction confirmed:', txHash);
-      toast.success(`${activeTab === 'buy' ? 'Buy' : 'Sell'} transaction successful!`, {
+      toast.success('Buy transaction successful!', {
         description: `Hash: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`
       });
 
       // Call updateBalance to update on-chain balances
       await updateBalancesOnChain(
-        activeTab === 'buy' ? PLATFORM_WALLET : address!,
-        activeTab === 'buy' ? address! : PLATFORM_WALLET,
+        PLATFORM_WALLET,
+        address!,
+        sharesAmount
+      );
+
+      // Refetch balance after successful transaction
+      setTimeout(() => {
+        refetchBalance();
+      }, 2000);
+
+    } catch (error: any) {
+      console.error('Transaction failed:', error);
+      const msg = error?.reason || error?.message || 'Unknown error';
+      toast.error(`Transaction failed: ${msg}`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const executeSellTransaction = async (sharesAmount: number) => {
+    if (!isConnected || !address) {
+      return;
+    }
+
+    // Get public key from environment variable
+    const publicKeyHex = process.env.NEXT_PUBLIC_ENCRYPTION_PUBLIC_KEY;
+    if (!publicKeyHex) {
+      toast.error('Encryption public key not configured.');
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      // Dynamically import eciesjs to avoid SSR issues
+      const { encrypt, PublicKey } = await import('eciesjs');
+
+      // 1. Convert public key from hex to PublicKey object
+      const publicKey = PublicKey.fromHex(publicKeyHex);
+
+      // 2. Encode the amount as bytes
+      const encoder = new TextEncoder();
+      const amountBytes = encoder.encode(sharesAmount.toString());
+
+      // 3. Encrypt the amount with the public key
+      const encrypted = encrypt(publicKey.uncompressed, amountBytes);
+
+      // 4. Convert encrypted bytes to hex string for the contract
+      const encryptedHex = '0x' + Array.from(encrypted)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // --- SELL LOGIC ---
+      // Sender: User Wallet (via Wagmi)
+      // Function: transfer (to: platform, amount: encrypted)
+      console.log('Initiating SELL transaction from User Wallet (Transfer)...');
+      console.log('Encrypted amount:', encryptedHex);
+
+      const destinationAddress = PLATFORM_WALLET;
+
+      const txHash = await writeContractAsync({
+        address: PRIVATE_ERC20_ADDRESS,
+        abi: PRIVATE_ERC20_ABI,
+        functionName: 'transfer',
+        args: [destinationAddress, encryptedHex as `0x${string}`],
+        chainId: ARBITRUM_SEPOLIA_ID,
+      });
+
+      console.log('Transaction confirmed:', txHash);
+      toast.success('Sell transaction successful!', {
+        description: `Hash: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`
+      });
+
+      // Call updateBalance to update on-chain balances
+      await updateBalancesOnChain(
+        address!,
+        PLATFORM_WALLET,
         sharesAmount
       );
 
@@ -611,6 +680,119 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           clients. Other prohibitions and restrictions apply. See additional information below.*
         </p>
       </div>
+
+      {/* Bank Transfer Modal */}
+      {showBankTransferModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-300">
+          <div className="bg-white dark:bg-gray-900 rounded-3xl p-0 max-w-md w-full shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col animate-in fade-in zoom-in-95 duration-200">
+            
+            {/* Header */}
+            <div className="px-8 pt-8 pb-6 text-center relative">
+              <button 
+                onClick={() => setShowBankTransferModal(false)}
+                className="absolute right-6 top-6 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+              >
+                <X size={24} />
+              </button>
+              <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z" />
+                </svg>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Bank Transfer Required
+              </h2>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">
+                Please complete the wire transfer to the account below to finalize your purchase.
+              </p>
+            </div>
+            
+            {/* Details */}
+            <div className="px-8 pb-8 space-y-4">
+              {/* Amount Card - Highlighted */}
+              <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-2xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-bold text-blue-600 dark:text-blue-300 uppercase tracking-wide mb-1">Amount to Transfer</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">${payAmount} USD</p>
+                </div>
+                <button 
+                  onClick={() => {
+                    navigator.clipboard.writeText(payAmount);
+                    toast.success('Amount copied to clipboard');
+                  }}
+                  className="p-2 hover:bg-blue-100 dark:hover:bg-blue-800 rounded-lg text-blue-600 dark:text-blue-400 transition-colors"
+                >
+                  <Copy size={20} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {/* Beneficiary */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Beneficiary</p>
+                    <p className="text-base font-bold text-gray-900 dark:text-white">BlackRock Inc.</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText("BlackRock Inc.");
+                      toast.success('Beneficiary copied');
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <Copy size={18} />
+                  </button>
+                </div>
+                
+                {/* IBAN */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-800 rounded-2xl">
+                  <div className="flex-1">
+                    <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">IBAN</p>
+                    <p className="text-sm font-mono font-semibold text-gray-900 dark:text-white break-all">GB29 NWBK 6016 1331 9268 19</p>
+                  </div>
+                  <button 
+                    onClick={() => {
+                      navigator.clipboard.writeText("GB29 NWBK 6016 1331 9268 19");
+                      toast.success('IBAN copied');
+                    }}
+                    className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors"
+                  >
+                    <Copy size={18} />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Actions */}
+            <div className="p-6 bg-gray-50 dark:bg-gray-800/50 border-t border-gray-100 dark:border-gray-800 flex flex-col gap-3">
+              <button
+                onClick={async () => {
+                  setShowBankTransferModal(false);
+                  const sharesAmount = parseFloat(receiveAmount);
+                  await executeBuyTransaction(sharesAmount);
+                }}
+                disabled={isProcessing}
+                className="w-full py-4 bg-black dark:bg-white text-white dark:text-black rounded-xl font-bold text-base hover:scale-[1.02] active:scale-[0.98] transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isProcessing ? (
+                  'Processing...'
+                ) : (
+                  <>
+                    <span>I have sent the transfer</span>
+                    <Check size={20} />
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowBankTransferModal(false)}
+                className="w-full py-3 text-gray-500 dark:text-gray-400 font-semibold hover:text-gray-900 dark:hover:text-white transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
