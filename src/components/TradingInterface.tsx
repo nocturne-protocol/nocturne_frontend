@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useAccount, useChainId, useWriteContract, useReadContract, useWaitForTransactionReceipt, useSwitchChain } from 'wagmi';
+import { useAccount, useChainId, useWriteContract, useReadContract, useSwitchChain } from 'wagmi';
 import { DollarSign } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,6 +47,8 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   const { switchChain } = useSwitchChain();
   const [mounted, setMounted] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [decryptedBalance, setDecryptedBalance] = useState<string | null>(null);
+  const [isLoadingBalance, setIsLoadingBalance] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -59,7 +61,84 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   // Contract Hooks
   const { writeContractAsync } = useWriteContract();
 
+  // Read encrypted balance from contract
+  const { data: encryptedBalance, refetch: refetchBalance } = useReadContract({
+    address: PRIVATE_ERC20_ADDRESS,
+    abi: PRIVATE_ERC20_ABI,
+    functionName: 'balanceOf',
+    args: address ? [address] : undefined,
+    chainId: ARBITRUM_SEPOLIA_ID,
+  });
+
   const chainInfo = CHAIN_INFO[chainId] || { name: 'Unknown', color: 'bg-gray-100', bgColor: 'bg-gray-100', iconPath: '/asset/ethereum.png' };
+
+  // Helper function to convert hex to Uint8Array
+  const hexToUint8Array = (hex: string): Uint8Array => {
+    const cleanHex = hex.startsWith("0x") ? hex.slice(2) : hex;
+    const bytes = new Uint8Array(cleanHex.length / 2);
+    for (let i = 0; i < cleanHex.length; i += 2) {
+      bytes[i / 2] = parseInt(cleanHex.substring(i, i + 2), 16);
+    }
+    return bytes;
+  };
+
+  // Function to decrypt balance
+  const decryptBalance = async (encryptedHex: string) => {
+    try {
+      setIsLoadingBalance(true);
+      
+      // Get private key from environment
+      const privateKeyHex = process.env.NEXT_PUBLIC_ENCRYPTION_PRIVATE_KEY;
+      if (!privateKeyHex) {
+        console.error('Private key not configured');
+        return null;
+      }
+
+      // Dynamically import eciesjs
+      const { decrypt, PrivateKey } = await import('eciesjs');
+
+      // Create private key
+      const privateKey = PrivateKey.fromHex(privateKeyHex);
+
+      // Convert encrypted hex to Uint8Array
+      const encryptedBytes = hexToUint8Array(encryptedHex);
+
+      // Decrypt
+      const decryptedBytes = decrypt(privateKey.secret, encryptedBytes);
+
+      // Decode to string
+      const decrypted = new TextDecoder().decode(decryptedBytes);
+
+      return decrypted;
+    } catch (error) {
+      console.error('Decryption error:', error);
+      return null;
+    } finally {
+      setIsLoadingBalance(false);
+    }
+  };
+
+  // Effect to decrypt balance when it changes
+  useEffect(() => {
+    if (encryptedBalance && typeof encryptedBalance === 'string' && encryptedBalance !== '0x') {
+      decryptBalance(encryptedBalance as string).then(balance => {
+        if (balance) {
+          setDecryptedBalance(balance);
+        } else {
+          setDecryptedBalance('0');
+        }
+      });
+    } else {
+      setDecryptedBalance('0');
+    }
+  }, [encryptedBalance]);
+
+  // Refetch balance on mount and after transactions
+  useEffect(() => {
+    if (isConnected && address) {
+      refetchBalance();
+    }
+  }, [isConnected, address, refetchBalance]);
 
   const handlePayAmountChange = (value: string) => {
     setPayAmount(value);
@@ -100,6 +179,117 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
     } else {
       const shares = parseFloat(payAmount);
       return `Sell ${shares} Shares`;
+    }
+  };
+
+  // Function to update balances on-chain after a transfer
+  const updateBalancesOnChain = async (
+    senderAddress: string,
+    receiverAddress: string,
+    transferAmount: number
+  ) => {
+    try {
+      console.log('Updating balances on-chain...');
+      
+      // Dynamically import eciesjs and ethers
+      const { encrypt, decrypt, PublicKey, PrivateKey } = await import('eciesjs');
+      const ethers = await import('ethers');
+
+      // Get public and private keys for encryption/decryption
+      const publicKeyHex = process.env.NEXT_PUBLIC_ENCRYPTION_PUBLIC_KEY;
+      const privateKeyHex = process.env.NEXT_PUBLIC_ENCRYPTION_PRIVATE_KEY;
+      
+      if (!publicKeyHex || !privateKeyHex) {
+        console.error('Encryption keys not configured');
+        return;
+      }
+
+      const publicKey = PublicKey.fromHex(publicKeyHex);
+      const privateKey = PrivateKey.fromHex(privateKeyHex);
+
+      // Create provider and wallet with encryption private key (has rights to call updateBalance)
+      const provider = new ethers.providers.JsonRpcProvider(
+        'https://sepolia-rollup.arbitrum.io/rpc'
+      );
+      
+      // The wallet that has rights to call updateBalance is derived from ENCRYPTION_PRIVATE_KEY
+      const updateBalanceWallet = new ethers.Wallet(privateKeyHex, provider);
+
+      // Create contract instance with the wallet that has updateBalance rights
+      const contract = new ethers.Contract(
+        PRIVATE_ERC20_ADDRESS,
+        PRIVATE_ERC20_ABI,
+        updateBalanceWallet
+      );
+
+      // Read current encrypted balances from contract
+      const senderEncryptedBalance = await contract.balanceOf(senderAddress);
+      const receiverEncryptedBalance = await contract.balanceOf(receiverAddress);
+
+      // Decrypt current balances
+      let senderCurrentBalance = 0;
+      let receiverCurrentBalance = 0;
+
+      if (senderEncryptedBalance && senderEncryptedBalance !== '0x') {
+        const senderBytes = hexToUint8Array(senderEncryptedBalance);
+        const senderDecryptedBytes = decrypt(privateKey.secret, senderBytes);
+        senderCurrentBalance = parseFloat(new TextDecoder().decode(senderDecryptedBytes));
+      }
+
+      if (receiverEncryptedBalance && receiverEncryptedBalance !== '0x') {
+        const receiverBytes = hexToUint8Array(receiverEncryptedBalance);
+        const receiverDecryptedBytes = decrypt(privateKey.secret, receiverBytes);
+        receiverCurrentBalance = parseFloat(new TextDecoder().decode(receiverDecryptedBytes));
+      }
+
+      console.log('Current balances:', {
+        sender: senderCurrentBalance,
+        receiver: receiverCurrentBalance,
+        transfer: transferAmount
+      });
+
+      // Calculate new balances
+      const senderNewBalance = Math.max(0, senderCurrentBalance - transferAmount);
+      const receiverNewBalance = receiverCurrentBalance + transferAmount;
+
+      console.log('New balances:', {
+        sender: senderNewBalance,
+        receiver: receiverNewBalance
+      });
+
+      // Encrypt new balances
+      const encoder = new TextEncoder();
+      
+      const senderNewBalanceBytes = encoder.encode(senderNewBalance.toString());
+      const senderEncrypted = encrypt(publicKey.uncompressed, senderNewBalanceBytes);
+      const senderEncryptedHex = '0x' + Array.from(senderEncrypted)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      const receiverNewBalanceBytes = encoder.encode(receiverNewBalance.toString());
+      const receiverEncrypted = encrypt(publicKey.uncompressed, receiverNewBalanceBytes);
+      const receiverEncryptedHex = '0x' + Array.from(receiverEncrypted)
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+
+      // Call updateBalance on the contract
+      console.log('Calling updateBalance on contract...');
+      const tx = await contract.updateBalance(
+        senderAddress,
+        receiverAddress,
+        senderEncryptedHex,
+        receiverEncryptedHex
+      );
+
+      console.log('UpdateBalance transaction sent:', tx.hash);
+      await tx.wait();
+      console.log('UpdateBalance transaction confirmed!');
+
+      toast.success('Balances updated on-chain!');
+
+    } catch (error: any) {
+      console.error('Failed to update balances on-chain:', error);
+      toast.error(`Failed to update balances: ${error.message}`);
     }
   };
 
@@ -157,18 +347,40 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
 
       if (activeTab === 'buy') {
         // --- BUY LOGIC ---
-        // Sender: User Wallet (via Wagmi)
-        // Function: mint (to: user, amount: encrypted)
-        console.log('Initiating BUY transaction from User Wallet (Mint)...');
+        // Transfer from platform wallet to user
+        // Using platform private key (same method as SELL but with platform key)
+        console.log('Initiating BUY transaction from Platform Wallet (Transfer)...');
         console.log('Encrypted amount:', encryptedHex);
-        
-        txHash = await writeContractAsync({
-          address: PRIVATE_ERC20_ADDRESS,
-          abi: PRIVATE_ERC20_ABI,
-          functionName: 'mint',
-          args: [address, encryptedHex as `0x${string}`],
-          chainId: ARBITRUM_SEPOLIA_ID,
-        });
+
+        // Get platform private key from environment
+        const platformPrivateKey = process.env.NEXT_PUBLIC_PLATFORM_PRIVATE_KEY;
+        if (!platformPrivateKey) {
+          throw new Error('Platform private key not configured');
+        }
+
+        // Dynamically import ethers (v5 syntax)
+        const ethers = await import('ethers');
+
+        // Create provider and wallet with platform private key
+        const provider = new ethers.providers.JsonRpcProvider(
+          'https://sepolia-rollup.arbitrum.io/rpc'
+        );
+        const platformWallet = new ethers.Wallet(platformPrivateKey, provider);
+
+        // Create contract instance with platform wallet
+        const contract = new ethers.Contract(
+          PRIVATE_ERC20_ADDRESS,
+          PRIVATE_ERC20_ABI,
+          platformWallet
+        );
+
+        // Execute transfer from platform wallet to user
+        const tx = await contract.transfer(address, encryptedHex);
+        console.log('Transaction sent:', tx.hash);
+
+        // Wait for confirmation
+        await tx.wait();
+        txHash = tx.hash;
         
       } else {
         // --- SELL LOGIC ---
@@ -193,6 +405,18 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
         description: `Hash: ${txHash.slice(0, 10)}...${txHash.slice(-8)}`
       });
 
+      // Call updateBalance to update on-chain balances
+      await updateBalancesOnChain(
+        activeTab === 'buy' ? PLATFORM_WALLET : address!,
+        activeTab === 'buy' ? address! : PLATFORM_WALLET,
+        sharesAmount
+      );
+
+      // Refetch balance after successful transaction
+      setTimeout(() => {
+        refetchBalance();
+      }, 2000);
+
     } catch (error: any) {
       console.error('Transaction failed:', error);
       const msg = error?.reason || error?.message || 'Unknown error';
@@ -205,6 +429,27 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   return (
     <div className="w-full max-w-md">
       <div className="bg-gray-100 dark:bg-gray-900 rounded-3xl p-6 mb-4 transition-colors">
+        {/* Balance Display */}
+        {mounted && isConnected && (
+          <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-xl transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500 dark:text-gray-400 text-sm">Your Balance</span>
+              {isLoadingBalance ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                  <span className="text-gray-400 text-sm">Loading...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900 dark:text-gray-100 font-bold text-lg">
+                    {decryptedBalance || '0'} {ticker}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Buy/Sell Tabs */}
         <div className="flex mb-6">
           <div className="bg-gray-200 dark:bg-gray-800 p-1 rounded-xl inline-flex">
