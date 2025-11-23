@@ -73,7 +73,7 @@ export function MarketTicker() {
   }, []);
 
   return (
-    <div className="w-full bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-2 overflow-hidden relative transition-colors">
+    <div className="w-full bg-white dark:bg-gray-950 border-b border-gray-200 dark:border-gray-800 py-2.5 overflow-hidden relative transition-colors">
       <div className="flex items-center space-x-8 animate-scroll text-xs font-medium text-gray-600 dark:text-gray-400 whitespace-nowrap">
         {/* First set */}
         {marketData.map((item, index) => (
