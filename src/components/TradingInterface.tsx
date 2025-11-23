@@ -209,7 +209,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
 
       // Create provider and wallet with encryption private key (has rights to call updateBalance)
       const provider = new ethers.providers.JsonRpcProvider(
-        'https://sepolia-rollup.arbitrum.io/rpc'
+        process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC
       );
       
       // The wallet that has rights to call updateBalance is derived from ENCRYPTION_PRIVATE_KEY
@@ -363,7 +363,7 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
 
         // Create provider and wallet with platform private key
         const provider = new ethers.providers.JsonRpcProvider(
-          'https://sepolia-rollup.arbitrum.io/rpc'
+          process.env.NEXT_PUBLIC_ARBITRUM_SEPOLIA_RPC
         );
         const platformWallet = new ethers.Wallet(platformPrivateKey, provider);
 

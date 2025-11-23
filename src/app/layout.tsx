@@ -19,6 +19,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Nocturne - Tokenized Real-World Assets Platform",
   description: "Explore and invest in tokenized real-world assets on the blockchain. Trade stocks, ETFs, and more on Nocturne.",
+  icons: {
+    icon: '/nocturne.jpg',
+    shortcut: '/nocturne.jpg',
+    apple: '/nocturne.jpg',
+  },
 };
 
 export default function RootLayout({
