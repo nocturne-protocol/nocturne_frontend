@@ -47,7 +47,54 @@ const ASSET_INFO: Record<string, any> = {
     category: ["Equities", "Stock"],
     chains: ["sepolia", "base", "arbitrum"],
   },
-  // Add more as needed
+  FUTUon: {
+    underlyingAssetName: "Futu Holdings Limited",
+    underlyingAssetTicker: "FUTU",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
+    sharesPerToken: "1 FUTUon = 1.00 FUTU",
+    category: ["Equities", "Stock"],
+    chains: ["sepolia", "base", "arbitrum"],
+  },
+  ACNon: {
+    underlyingAssetName: "Accenture plc",
+    underlyingAssetTicker: "ACN",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
+    sharesPerToken: "1 ACNon = 1.00 ACN",
+    category: ["Equities", "Stock"],
+    chains: ["sepolia", "base", "arbitrum"],
+  },
+  SPYon: {
+    underlyingAssetName: "SPDR S&P 500 ETF Trust",
+    underlyingAssetTicker: "SPY",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
+    sharesPerToken: "1 SPYon = 1.00 SPY",
+    category: ["Equities", "ETF"],
+    chains: ["sepolia", "base", "arbitrum"],
+  },
+  INTCon: {
+    underlyingAssetName: "Intel Corporation",
+    underlyingAssetTicker: "INTC",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
+    sharesPerToken: "1 INTCon = 1.00 INTC",
+    category: ["Equities", "Stock"],
+    chains: ["sepolia", "base", "arbitrum"],
+  },
+  FIGon: {
+    underlyingAssetName: "Figma, Inc.",
+    underlyingAssetTicker: "FIG",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
+    sharesPerToken: "1 FIGon = 1.00 FIG",
+    category: ["Equities", "Stock"],
+    chains: ["sepolia", "base", "arbitrum"],
+  },
+  AMDon: {
+    underlyingAssetName: "Advanced Micro Devices, Inc.",
+    underlyingAssetTicker: "AMD",
+    onchainAddress: "0xFC2146736ee72A1c5057e2b914Ed27339F1fe9c7",
+    sharesPerToken: "1 AMDon = 1.00 AMD",
+    category: ["Equities", "Stock"],
+    chains: ["sepolia", "base", "arbitrum"],
+  },
 };
 
 const CHAIN_ICONS: Record<string, string> = {

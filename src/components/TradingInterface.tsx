@@ -429,27 +429,6 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
   return (
     <div className="w-full max-w-md">
       <div className="bg-gray-100 dark:bg-gray-900 rounded-3xl p-6 mb-4 transition-colors">
-        {/* Balance Display */}
-        {mounted && isConnected && (
-          <div className="mb-4 p-4 bg-white dark:bg-gray-800 rounded-xl transition-colors">
-            <div className="flex items-center justify-between">
-              <span className="text-gray-500 dark:text-gray-400 text-sm">Your Balance</span>
-              {isLoadingBalance ? (
-                <div className="flex items-center gap-2">
-                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-                  <span className="text-gray-400 text-sm">Loading...</span>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-900 dark:text-gray-100 font-bold text-lg">
-                    {decryptedBalance || '0'} {ticker}
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
         {/* Buy/Sell Tabs */}
         <div className="flex mb-6">
           <div className="bg-gray-200 dark:bg-gray-800 p-1 rounded-xl inline-flex">
@@ -572,6 +551,27 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           </div>
         </div>
 
+        {/* Balance Display */}
+        {mounted && isConnected && (
+          <div className="mb-6 p-4 bg-white dark:bg-gray-800 rounded-xl transition-colors">
+            <div className="flex items-center justify-between">
+              <span className="text-gray-500 dark:text-gray-400 text-sm">Your Balance</span>
+              {isLoadingBalance ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+                  <span className="text-gray-400 text-sm">Loading...</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <span className="text-gray-900 dark:text-gray-100 font-bold text-lg">
+                    {decryptedBalance || '0'} {ticker}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Rate Info */}
         <div className="mb-6 space-y-2">
           <div className="flex justify-between items-center">
@@ -610,38 +610,6 @@ export default function TradingInterface({ ticker, assetName, currentPrice, asse
           and sold in the EEA and UK solely to qualified investors, and in Switzerland solely to professional 
           clients. Other prohibitions and restrictions apply. See additional information below.*
         </p>
-      </div>
-
-      {/* Also Available On */}
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 mb-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer">
-        <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">Also Available On</span>
-        <div className="flex items-center gap-3">
-          <div className="flex -space-x-2">
-             <div className="w-6 h-6 bg-black dark:bg-white rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center z-10">
-               <span className="text-white dark:text-black text-[8px] font-bold">B</span>
-             </div>
-             <div className="w-6 h-6 bg-yellow-400 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center">
-               <span className="text-black text-[8px] font-bold">Op</span>
-             </div>
-          </div>
-          <span className="text-gray-500 dark:text-gray-400 text-sm font-medium">& 3 more</span>
-          <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </div>
-
-      {/* Need Help */}
-      <div className="bg-gray-50 dark:bg-gray-900 rounded-xl p-4 flex items-center justify-between hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors cursor-pointer">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 bg-gray-900 dark:bg-gray-100 rounded-full flex items-center justify-center">
-            <span className="text-white dark:text-gray-900 text-xs font-bold">?</span>
-          </div>
-          <span className="text-gray-900 dark:text-gray-100 font-semibold text-sm">Need help?</span>
-        </div>
-        <svg className="w-4 h-4 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
       </div>
     </div>
   );
